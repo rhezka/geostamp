@@ -110,6 +110,12 @@ once a photo is loaded, as before. The search box keeps its round × on the righ
 as soon as there is text, and Safari's own cancel button is suppressed so there is only
 one.
 
+**28-10-2026, reading the photo's own EXIF.** A photo from the library usually already
+knows where and when it was taken, so the app now reads that and pre-fills the point and
+the date. exifr (MIT, 76 KB) is vendored locally rather than pulled from a CDN so it works
+offline and adds no third-party request. Dates are shown in WIB. Camera captures still use
+the current moment, and a photo without EXIF simply leaves the defaults alone.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.

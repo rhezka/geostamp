@@ -165,6 +165,7 @@
   </div>
 </div>
 
+<script src="exifr.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // Penulis EXIF minimal: GPS + tanggal/jam. Dipakai halaman stempel foto.
@@ -509,9 +510,35 @@
       $("afterpick").style.display = "flex";
       $("err").textContent = "";
       if (dariKamera) useNow();
+      else bacaExif(f);
     };
     im.onerror = () => { $("err").textContent = "Cannot read this photo. Try JPG or PNG."; };
     im.src = photoURL;
+  }
+
+  // foto dari galeri: kalau ada EXIF, pakai lokasi dan tanggal aslinya
+  async function bacaExif(file){
+    if (typeof exifr === "undefined") return;
+    let o = null;
+    try { o = await exifr.parse(file, { gps: true }); } catch (e) { return; }
+    if (!o) return;
+
+    if (typeof o.latitude === "number" && typeof o.longitude === "number" &&
+        !(Math.abs(o.latitude) < 0.0001 && Math.abs(o.longitude) < 0.0001)){
+      setPoint(o.latitude, o.longitude);
+      map.setView([o.latitude, o.longitude], 17);
+    }
+
+    const t = o.DateTimeOriginal || o.CreateDate || o.ModifyDate;
+    if (t){
+      const d = new Date(t);
+      if (!isNaN(d.getTime())){
+        const w = new Date(d.getTime() + 7*3600*1000);      // tampilkan dalam WIB
+        const p2 = n => String(n).padStart(2,"0");
+        $("tgl").value = `${w.getUTCFullYear()}-${p2(w.getUTCMonth()+1)}-${p2(w.getUTCDate())}`;
+        $("jam").value = `${p2(w.getUTCHours())}:${p2(w.getUTCMinutes())}`;
+      }
+    }
   }
 
   // kamera: waktu dan titik diambil saat itu juga
