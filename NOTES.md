@@ -133,6 +133,10 @@ prints, what the saved-places list shows, and what tapping the coordinate box co
 the clipboard. Pasting that same line back into the search box resolves it, because the
 parser strips the words and reads the pair.
 
+**28-10-2026, copy button.** The coordinate line got a small clipboard icon on the right,
+so copying no longer depends on tapping the whole box. The text is rebuilt from the stored
+point, which keeps the format identical to what the stamp prints.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.
