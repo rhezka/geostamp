@@ -98,6 +98,14 @@ Ditambahkan baris kecil "by rhezka" di bawah judul aplikasi. Sengaja tidak dimas
 dalam stempel foto, karena stempel dipakai untuk bukti kerja; kredit penulis di gambar
 justru bisa mengganggu. Kalau nanti ingin muncul di gambar, bisa ditambah opsi terpisah.
 
+### 28-10-2026 — header beridentitas, pilihan peta dua kotak
+
+- Header diberi latar gradasi gelap dan garis bawah, ikon 46 px di kiri, judul 26 px,
+  dan "by rhezka" di bawah judul dengan warna lebih terang agar tidak samar.
+- Map Style dan Map Position kembali sejajar satu baris berisi dua kotak. Tiap kotak
+  dua baris: label kecil di atas, nilai aktif di bawah (Satellite/Street, Left/Right).
+- Teks nilai dipendekkan: "Street" dan "Left"/"Right" tanpa kata Map.
+
 ### Rollback
 
 Repo masih baru dan mandiri. Untuk kembali ke keadaan sebelum pemindahan, berkas asli
