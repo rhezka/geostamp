@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<title>Stempel Foto</title>
+<title>Photo Stamp</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   :root { --bg:#0f1115; --card:#161b23; --line:#28303d; --txt:#e8eaee; --dim:#8b95a7; --blue:#2f6ff2; }
@@ -51,58 +51,52 @@
 </head>
 <body>
 <header>
-  <h1>Stempel Foto</h1>
-  <p>Foto polos jadi foto berstempel peta, koordinat, alamat, dan waktu.</p>
+  <h1>Photo Stamp</h1>
 </header>
 
 <div class="card">
-  <span class="label">1. Foto dari galeri</span>
-  <label class="filebtn" for="file">Pilih foto (HEIC / JPG)</label>
+  <label class="filebtn" for="file">Choose Photo</label>
   <input id="file" type="file" accept="image/*,.heic,.heif">
   <img id="preview" alt="">
 </div>
 
 <div class="card">
-  <span class="label">2. Titik lokasi</span>
   <div class="searchwrap">
-    <input id="q" type="search" placeholder="Cari tempat atau alamat…" autocomplete="off">
+    <input id="q" type="search" placeholder="Search place or address" autocomplete="off">
     <div id="hasil" class="hasil"></div>
   </div>
   <div id="map"></div>
-  <div id="coord" class="coord" style="margin-top:10px">— belum ada titik —</div>
+  <div id="coord" class="coord" style="margin-top:12px">Tap the map to set a point</div>
   <div id="addr" class="addr"></div>
 </div>
 
 <div class="card">
-  <span class="label">3. Waktu dan gaya peta</span>
   <div class="row">
     <input id="tgl" type="date">
     <input id="jam" type="time">
   </div>
   <div class="row">
     <select id="gaya">
-      <option value="satelit" selected>Citra satelit</option>
-      <option value="peta">Peta standar</option>
+      <option value="satelit" selected>Satellite</option>
+      <option value="peta">Street map</option>
     </select>
     <select id="posisi">
-      <option value="bl" selected>Peta di kiri</option>
-      <option value="br">Peta di kanan</option>
+      <option value="bl" selected>Map left</option>
+      <option value="br">Map right</option>
     </select>
   </div>
-  <div style="margin-top:12px">
-    <span class="label" style="margin-bottom:4px">Ukuran stempel <b id="skalaval">100%</b></span>
+  <div style="margin-top:14px">
     <input id="skala" type="range" min="70" max="150" step="5" value="100" style="width:100%">
+    <div class="hint" style="text-align:center">Size <b id="skalaval">100%</b></div>
   </div>
-  <button id="go">Buat stempel</button>
+  <button id="go">Create Stamp</button>
   <div id="err" class="err"></div>
 </div>
 
 <div class="card">
-  <span class="label">4. Hasil</span>
   <img id="outimg" alt="">
+  <button id="save" style="display:none">Save to Photos</button>
   <div class="hint" id="exifinfo" style="display:none"></div>
-  <button id="save" style="display:none">Simpan ke Foto</button>
-  <div class="hint" id="savehint" style="display:none">Tombol simpan membuka menu Bagikan, pilih Simpan Gambar. Atau tekan lama gambar di atas lalu pilih Simpan ke Foto.</div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -325,7 +319,7 @@
       marker.on("dragend", e => { const p = e.target.getLatLng(); setPoint(p.lat, p.lng); });
     }
     $("coord").textContent = "Lat " + fmt(la) + ", Long " + fmt(lo);
-    $("addr").textContent = "mencari alamat…";
+    $("addr").textContent = "looking up address…";
     reverse(la, lo);
   }
 
@@ -354,8 +348,8 @@
       [ a.road, a.neighbourhood, a.hamlet, a.village, a.suburb, a.city_district, kota,
         kota ? null : region, state, country ].forEach(push);
       alamat = parts.join(", ") || j.display_name || "";
-      $("addr").textContent = alamat || "alamat tidak ditemukan";
-    }).catch(() => { alamat = ""; judul = ""; $("addr").textContent = "alamat tidak bisa dimuat (tetap bisa dipakai)"; });
+      $("addr").textContent = alamat || "address not found";
+    }).catch(() => { alamat = ""; judul = ""; $("addr").textContent = "address unavailable"; });
   }
 
   map.on("click", e => setPoint(e.latlng.lat, e.latlng.lng));
@@ -410,7 +404,7 @@
       $("preview").style.display = "block";
       $("err").textContent = "";
     };
-    im.onerror = () => { $("err").textContent = "Foto tidak bisa dibaca. Coba format JPG atau PNG."; };
+    im.onerror = () => { $("err").textContent = "Cannot read this photo. Try JPG or PNG."; };
     im.src = photoURL;
   });
 
@@ -549,12 +543,12 @@
 
   async function render(){
     $("err").textContent = "";
-    if (!photo) { $("err").textContent = "Pilih foto dulu."; return; }
-    if (lat === null) { $("err").textContent = "Tentukan titik lokasi dulu."; return; }
+    if (!photo) { $("err").textContent = "Choose a photo first."; return; }
+    if (lat === null) { $("err").textContent = "Set the location point first."; return; }
     const when = parseWhen();
-    if (!when) { $("err").textContent = "Isi tanggal dan jam."; return; }
+    if (!when) { $("err").textContent = "Select date and time."; return; }
 
-    $("go").textContent = "Memproses…";
+    $("go").textContent = "Working…";
     const gaya = $("gaya").value, posisi = $("posisi").value;
     // iOS membatasi ukuran kanvas (~16 juta piksel); foto besar diperkecil dulu
     const MAXPX = 16000000;
@@ -659,8 +653,7 @@
     lastCanvas = canvas;
     await applyExif(canvas, when);
     $("save").style.display = "block";
-    $("savehint").style.display = "block";
-    $("go").textContent = "Buat stempel";
+    $("go").textContent = "Create Stamp";
   }
 
   // EXIF hasil disamakan dengan stempel: GPS, tanggal, jam, zona waktu
@@ -692,7 +685,7 @@
           out.dataset.ready = "1";
           const info = $("exifinfo");
           info.style.display = "block";
-          info.textContent = "EXIF ditulis: lat " + fmt(lat) + ", long " + fmt(lon) +
+          info.textContent = "EXIF: lat " + fmt(lat) + ", long " + fmt(lon) +
             ", " + dateTime + " (" + (window.ExifWriter ? "+07:00" : "tanpa zona") + ")";
           resolve();
         }).catch(() => resolve());
@@ -703,8 +696,8 @@
   $("go").addEventListener("click", () => {
     render().catch(e => {
       console.error(e);
-      $("err").textContent = "Gagal memproses: " + (e && e.message ? e.message : "kesalahan tidak dikenal");
-      $("go").textContent = "Buat stempel";
+      $("err").textContent = "Failed: " + (e && e.message ? e.message : "unknown error");
+      $("go").textContent = "Create Stamp";
     });
   });
 

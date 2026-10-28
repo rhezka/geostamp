@@ -36,6 +36,11 @@ ke repo ini atas permintaan pemilik.
 - 28-10-2026: repo dijadikan publik dan GitHub Pages diaktifkan dari branch `main`, folder akar.
   Alamat: https://rhezka.github.io/geotag-editor/ (status build: built, HTTP 200).
 
+### 28-10-2026 — tampilan bahasa Inggris
+
+Seluruh teks halaman diganti ke bahasa Inggris dan label bernomor dihapus. Tidak ada
+perubahan logika. Foto tetap diproses di browser, tidak pernah diunggah.
+
 ### Rollback
 
 Repo masih baru dan mandiri. Untuk kembali ke keadaan sebelum pemindahan, berkas asli
