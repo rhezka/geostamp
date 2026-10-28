@@ -1,0 +1,58 @@
+name: build-ipa
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "app/**"
+      - "leaflet/**"
+      - ".github/workflows/ios.yml"
+
+jobs:
+  ipa:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Siapkan aset web di dalam app
+        run: |
+          mkdir -p app/Web
+          cp index.html manifest.json sw.js exifr.min.js app/Web/
+          cp icon-*.png app/Web/
+          cp -R leaflet app/Web/leaflet
+
+      - name: Pasang XcodeGen
+        run: brew install xcodegen
+
+      - name: Buat proyek Xcode
+        run: cd app && xcodegen generate
+
+      - name: Build tanpa tanda tangan
+        run: |
+          cd app
+          xcodebuild \
+            -project GeoStamp.xcodeproj \
+            -scheme GeoStamp \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Bungkus jadi IPA
+        run: |
+          mkdir -p Payload
+          cp -R app/build/Build/Products/Release-iphoneos/GeoStamp.app Payload/
+          zip -qry GeoStamp.ipa Payload
+          ls -la GeoStamp.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GeoStamp-ipa
+          path: GeoStamp.ipa
+          if-no-files-found: error

@@ -1,3 +1,8 @@
 .venv/
 *.jpg
 !contoh-foto-uji.jpg
+app/Web/
+app/GeoStamp.xcodeproj/
+app/build/
+Payload/
+*.ipa

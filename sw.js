@@ -3,7 +3,7 @@
 const CACHE = "geostamp-v32";
 const TILE_CACHE = "geostamp-tiles";
 const TILE_HOSTS = ["tile.openstreetmap.org", "server.arcgisonline.com", "a.tile.opentopomap.org", "a.basemaps.cartocdn.com"];
-const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-180.png", "./exifr.min.js"];
+const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-180.png", "./exifr.min.js", "./leaflet/leaflet.js", "./leaflet/leaflet.css"];
 const TILE_CACHE_CORS = "geostamp-tiles-cors";
 
 self.addEventListener("install", (e) => {
