@@ -804,14 +804,17 @@
   function loadTile(url, tries){
     tries = tries || 2;
     return new Promise(resolve => {
-      let n = 0;
+      let n = 0, selesai = false;
+      const akhir = (v) => { if (!selesai){ selesai = true; resolve(v); } };
       const coba = () => {
         const img = new Image();
+        const jam = setTimeout(() => { if (++n < tries) coba(); else akhir(null); }, 7000);
         img.crossOrigin = "anonymous";
-        img.onload = () => resolve(img);
+        img.onload = () => { clearTimeout(jam); akhir(img); };
         img.onerror = () => {
+          clearTimeout(jam);
           if (++n < tries) setTimeout(coba, 250 + n * 250);
-          else resolve(null);
+          else akhir(null);
         };
         img.src = url;
       };
@@ -1044,7 +1047,9 @@
     roundRect(ctx, px0, py0, px1 - px0, L.panelH, Math.round(28*k));
     ctx.fill();
 
+    $("go").textContent = "Working… map";
     const maps = await bestMap(mapS, gaya);
+    $("go").textContent = "Working… drawing";
     const mimg = maps.canvas;
     ctx.save();
     roundRect(ctx, px0 + pad, py0 + pad, mapS, mapS, Math.round(14*k));
@@ -1080,6 +1085,7 @@
 
     lastCanvas = canvas;
     await applyExif(canvas, when);
+    $("outcard").style.display = "block";
     $("save").style.display = "block";
     $("go").textContent = "Create Stamp";
   }
@@ -1124,7 +1130,8 @@
   $("go").addEventListener("click", () => {
     render().catch(e => {
       console.error(e);
-      $("err").textContent = "Failed: " + (e && e.message ? e.message : "unknown error");
+      console.error(e);
+      $("err").textContent = "Could not create the stamp. " + (e && e.message ? e.message : "Try again.");
       $("go").textContent = "Create Stamp";
     });
   });

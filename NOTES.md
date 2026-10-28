@@ -121,6 +121,12 @@ Decimal pairs like `-0.347755,109.4402867` and hemisphere forms like `0.347S 109
 recognised before any lookup is attempted, so nothing is sent to Nominatim for a point we
 already have. The order is latitude first, and values outside valid ranges are ignored.
 
+**28-10-2026, create did nothing.** The result card was hidden by the previous change and
+never shown again — the stamp was drawn but stayed invisible, which looked exactly like a
+failure. Fixed, and two related hazards removed: tile loads now give up after seven
+seconds instead of hanging forever, and the button reports which stage it is in while a
+large photo is processed.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.
