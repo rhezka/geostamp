@@ -160,6 +160,11 @@ the reference image used, instead of the Arial kept for the Panel template. Text
 constrained to roughly the left half of the frame, so the address wraps into two or three
 short lines and the right side of the photo stays clear.
 
+**28-10-2026, Card removed.** The second template did not look right and was deleted at
+the owner's request. Notes for the future: the reference app gives each template its own
+typeface rather than the system font, so a template is a font and layout pair, not just a
+different arrangement.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.
