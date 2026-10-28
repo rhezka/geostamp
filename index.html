@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>Stempel Foto</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root { --bg:#0f1115; --card:#161b23; --line:#28303d; --txt:#e8eaee; --dim:#8b95a7; --blue:#2f6ff2; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; background:var(--bg); color:var(--txt); font-family:-apple-system,system-ui,"Segoe UI",sans-serif; padding-bottom:40px; }
+  header { padding:16px 16px 10px; }
+  h1 { font-size:17px; margin:0 0 3px; letter-spacing:.01em; }
+  header p { margin:0; font-size:12.5px; color:var(--dim); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; margin:12px; padding:14px; }
+  .label { font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--dim); margin-bottom:8px; display:block; }
+  #map { height:44vh; min-height:260px; border-radius:12px; overflow:hidden; background:#1b1f27; }
+  .searchwrap { position:relative; margin-bottom:10px; }
+  #q { width:100%; padding:12px 14px 12px 38px; border-radius:12px; border:1px solid var(--line);
+       background:#1a1f28 url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%238b95a7' stroke-width='2.2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='M20 20l-4.2-4.2'/></svg>") no-repeat 12px center;
+       color:var(--txt); font-size:16px; font-family:inherit; }
+  .hasil { position:absolute; left:0; right:0; top:calc(100% + 6px); background:#1a1f28; border:1px solid var(--line);
+           border-radius:12px; overflow:hidden; display:none; z-index:1200; max-height:44vh; overflow-y:auto; }
+  .hasil div { padding:11px 13px; font-size:13.5px; line-height:1.35; border-bottom:1px solid #232a36; }
+  .hasil div:last-child { border-bottom:0; }
+  .hasil b { display:block; font-weight:600; }
+  .hasil span { color:var(--dim); font-size:12px; }
+  .coord { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:15px; background:#1a1f28;
+           border:1px solid var(--line); border-radius:11px; padding:10px 12px; user-select:all; -webkit-user-select:all; }
+  .addr { font-size:13px; color:var(--dim); line-height:1.45; margin-top:8px; min-height:18px; }
+  .row { display:flex; gap:10px; margin-top:12px; }
+  .row > * { flex:1; min-width:0; }
+  input[type=date], input[type=time], select {
+    width:100%; padding:11px 12px; border-radius:11px; border:1px solid var(--line);
+    background:#1a1f28; color:var(--txt); font-size:16px; font-family:inherit; appearance:none; }
+  button { width:100%; padding:15px; border:0; border-radius:13px; background:var(--blue); color:#fff;
+           font-size:16px; font-weight:600; font-family:inherit; margin-top:14px; }
+  button:active { background:#2559c9; }
+  button.ghost { background:#232b38; color:var(--txt); }
+  button.ghost:active { background:#2c3644; }
+  .filebtn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:15px;
+             border-radius:13px; background:#232b38; color:var(--txt); font-size:15px; font-weight:600; }
+  .filebtn:active { background:#2c3644; }
+  #file { display:none; }
+  #preview { width:100%; border-radius:12px; margin-top:12px; display:none; }
+  #outimg { width:100%; border-radius:12px; display:none; margin-top:12px; }
+  .hint { font-size:12px; color:var(--dim); line-height:1.5; margin-top:10px; }
+  .pill { display:inline-block; font-size:11px; padding:3px 9px; border-radius:99px; background:#20304d; color:#9ec1ff; }
+  .err { color:#ff8a8a; font-size:13px; margin-top:10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Stempel Foto</h1>
+  <p>Foto polos jadi foto berstempel peta, koordinat, alamat, dan waktu.</p>
+</header>
+
+<div class="card">
+  <span class="label">1. Foto dari galeri</span>
+  <label class="filebtn" for="file">Pilih foto (HEIC / JPG)</label>
+  <input id="file" type="file" accept="image/*,.heic,.heif">
+  <img id="preview" alt="">
+</div>
+
+<div class="card">
+  <span class="label">2. Titik lokasi</span>
+  <div class="searchwrap">
+    <input id="q" type="search" placeholder="Cari tempat atau alamat…" autocomplete="off">
+    <div id="hasil" class="hasil"></div>
+  </div>
+  <div id="map"></div>
+  <div id="coord" class="coord" style="margin-top:10px">— belum ada titik —</div>
+  <div id="addr" class="addr"></div>
+</div>
+
+<div class="card">
+  <span class="label">3. Waktu dan gaya peta</span>
+  <div class="row">
+    <input id="tgl" type="date">
+    <input id="jam" type="time">
+  </div>
+  <div class="row">
+    <select id="gaya">
+      <option value="satelit" selected>Citra satelit</option>
+      <option value="peta">Peta standar</option>
+    </select>
+    <select id="posisi">
+      <option value="bl" selected>Peta di kiri</option>
+      <option value="br">Peta di kanan</option>
+    </select>
+  </div>
+  <div style="margin-top:12px">
+    <span class="label" style="margin-bottom:4px">Ukuran stempel <b id="skalaval">100%</b></span>
+    <input id="skala" type="range" min="70" max="150" step="5" value="100" style="width:100%">
+  </div>
+  <button id="go">Buat stempel</button>
+  <div id="err" class="err"></div>
+</div>
+
+<div class="card">
+  <span class="label">4. Hasil</span>
+  <img id="outimg" alt="">
+  <div class="hint" id="exifinfo" style="display:none"></div>
+  <button id="save" style="display:none">Simpan ke Foto</button>
+  <div class="hint" id="savehint" style="display:none">Tombol simpan membuka menu Bagikan, pilih Simpan Gambar. Atau tekan lama gambar di atas lalu pilih Simpan ke Foto.</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// Penulis EXIF minimal: GPS + tanggal/jam. Dipakai halaman stempel foto.
+(function () {
+  const T_BYTE = 1, T_ASCII = 2, T_LONG = 4, T_RATIONAL = 5;
+
+  function dms(v) {
+    v = Math.abs(v);
+    const d = Math.floor(v);
+    const m = Math.floor((v - d) * 60);
+    const s = ((v - d) * 60 - m) * 60;
+    return [[d, 1], [m, 1], [Math.round(s * 10000), 10000]];
+  }
+
+  // entri: {tag, type, count, bytes}
+  function buildApp1(opt) {
+    const enc = new TextEncoder();
+    const ascii = (s) => {
+      const b = new Uint8Array(s.length + 1);
+      b.set(enc.encode(s));
+      b[s.length] = 0;
+      return b;
+    };
+
+    const lat = dms(opt.lat), lon = dms(opt.lon);
+    const dt = ascii(opt.dateTime);          // "YYYY:MM:DD HH:MM:SS"
+    const off = ascii(opt.offset || "+07:00");
+    const stamp = ascii(opt.dateStamp);      // "YYYY:MM:DD"
+
+    const rat = (arr) => {
+      const b = new Uint8Array(24);
+      const dv = new DataView(b.buffer);
+      arr.forEach(([n, d], i) => { dv.setUint32(i * 8, n, true); dv.setUint32(i * 8 + 4, d, true); });
+      return b;
+    };
+    const byte4 = (a) => new Uint8Array(a);
+
+    const ifd0 = [
+      { tag: 0x0132, type: T_ASCII, count: 20, bytes: dt },
+      { tag: 0x8769, type: T_LONG, count: 1, bytes: null },   // -> Exif IFD
+      { tag: 0x8825, type: T_LONG, count: 1, bytes: null }    // -> GPS IFD
+    ];
+    const exifIfd = [
+      { tag: 0x9003, type: T_ASCII, count: 20, bytes: dt },
+      { tag: 0x9004, type: T_ASCII, count: 20, bytes: dt },
+      { tag: 0x9011, type: T_ASCII, count: 7, bytes: off },
+      { tag: 0x9012, type: T_ASCII, count: 7, bytes: off }
+    ];
+    const gpsIfd = [
+      { tag: 0x0000, type: T_BYTE, count: 4, bytes: byte4([2, 3, 0, 0]) },
+      { tag: 0x0001, type: T_ASCII, count: 2, bytes: ascii(opt.lat < 0 ? "S" : "N") },
+      { tag: 0x0002, type: T_RATIONAL, count: 3, bytes: rat(lat) },
+      { tag: 0x0003, type: T_ASCII, count: 2, bytes: ascii(opt.lon < 0 ? "W" : "E") },
+      { tag: 0x0004, type: T_RATIONAL, count: 3, bytes: rat(lon) },
+      { tag: 0x001D, type: T_ASCII, count: 11, bytes: stamp }
+    ];
+
+    const sizeOf = (n) => 2 + n * 12 + 4;
+    const ifd0At = 8;
+    const exifAt = ifd0At + sizeOf(ifd0.length);
+    const gpsAt = exifAt + sizeOf(exifIfd.length);
+    const dataAt = gpsAt + sizeOf(gpsIfd.length);
+
+    // pointer
+    ifd0[1].bytes = new Uint8Array(4); new DataView(ifd0[1].bytes.buffer).setUint32(0, exifAt, true);
+    ifd0[2].bytes = new Uint8Array(4); new DataView(ifd0[2].bytes.buffer).setUint32(0, gpsAt, true);
+
+    // hitung offset data (nilai > 4 byte)
+    let cursor = dataAt;
+    const place = (entries) => {
+      entries.forEach((e) => {
+        if (e.bytes.length > 4) {
+          if (cursor % 2) cursor++;
+          e.at = cursor;
+          cursor += e.bytes.length;
+        }
+      });
+    };
+    place(ifd0); place(exifIfd); place(gpsIfd);
+
+    const total = cursor + (cursor % 2);
+    const tiff = new Uint8Array(total);
+    const dv = new DataView(tiff.buffer);
+    tiff[0] = 0x49; tiff[1] = 0x49;              // "II"
+    dv.setUint16(2, 0x2a, true);
+    dv.setUint32(4, ifd0At, true);
+
+    const writeIfd = (entries, at) => {
+      dv.setUint16(at, entries.length, true);
+      entries.forEach((e, i) => {
+        const p = at + 2 + i * 12;
+        dv.setUint16(p, e.tag, true);
+        dv.setUint16(p + 2, e.type, true);
+        dv.setUint32(p + 4, e.count, true);
+        if (e.bytes.length <= 4) {
+          tiff.set(e.bytes, p + 8);
+        } else {
+          dv.setUint32(p + 8, e.at, true);
+          tiff.set(e.bytes, e.at);
+        }
+      });
+      dv.setUint32(at + 2 + entries.length * 12, 0, true);
+    };
+    writeIfd(ifd0, ifd0At); writeIfd(exifIfd, exifAt); writeIfd(gpsIfd, gpsAt);
+
+    const payload = new Uint8Array(6 + tiff.length);
+    payload.set(new TextEncoder().encode("Exif\0\0"), 0);   // "Exif" + dua byte nol
+    payload[4] = 0; payload[5] = 0;
+    payload.set(tiff, 6);
+
+    const app1 = new Uint8Array(4 + payload.length);
+    app1[0] = 0xff; app1[1] = 0xe1;
+    const len = payload.length + 2;
+    app1[2] = (len >> 8) & 0xff; app1[3] = len & 0xff;
+    app1.set(payload, 4);
+    return app1;
+  }
+
+  function stripExif(jpg) {
+    // buang APP1 Exif lama; segmen lain (JFIF, thumbnail) dibiarkan
+    if (jpg[0] !== 0xff || jpg[1] !== 0xd8) return jpg;
+    const out = [jpg.subarray(0, 2)];
+    let i = 2;
+    while (i < jpg.length - 1) {
+      if (jpg[i] !== 0xff) break;
+      const m = jpg[i + 1];
+      if (m === 0xda) { out.push(jpg.subarray(i)); return concat(out); }
+      if (m === 0xd8) { i += 2; continue; }
+      const segLen = (jpg[i + 2] << 8) | jpg[i + 3];
+      const seg = jpg.subarray(i, i + 2 + segLen);
+      const isExif = m === 0xe1 && seg[4] === 0x45 && seg[5] === 0x78 && seg[6] === 0x69 && seg[7] === 0x66;
+      if (!isExif) out.push(seg);
+      i += 2 + segLen;
+    }
+    out.push(jpg.subarray(i));
+    return concat(out);
+  }
+
+  function concat(parts) {
+    let n = 0;
+    parts.forEach((p) => (n += p.length));
+    const out = new Uint8Array(n);
+    let o = 0;
+    parts.forEach((p) => { out.set(p, o); o += p.length; });
+    return out;
+  }
+
+  function insertExif(jpg, opt) {
+    const clean = stripExif(jpg);
+    const app1 = buildApp1(opt);
+    const out = new Uint8Array(clean.length + app1.length);
+    out.set(clean.subarray(0, 2), 0);
+    out.set(app1, 2);
+    out.set(clean.subarray(2), 2 + app1.length);
+    return out;
+  }
+
+  if (typeof module !== "undefined" && module.exports) module.exports = { buildApp1, insertExif };
+  else window.ExifWriter = { buildApp1, insertExif };
+})();
+
+</script>
+<script>
+(function(){
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const TILES = {
+    satelit: { url:(z,x,y)=>`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`,
+              attr:"© Esri, Maxar, Earthstar Geographics", max:19 },
+    peta:    { url:(z,x,y)=>`https://tile.openstreetmap.org/${z}/${x}/${y}.png`,
+              attr:"© OpenStreetMap", max:19 }
+  };
+  const HARI = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
+  const BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+
+  let photo = null, photoURL = null, outURL = null, lastCanvas = null, lastFile = null;
+  let lat = null, lon = null, alamat = "", judul = "";
+
+  // ---------- waktu bawaan: sekarang, WIB
+  (function initTime(){
+    const now = new Date();
+    const t = new Date(now.getTime() + (7*60 + now.getTimezoneOffset())*60000);
+    const p = n => String(n).padStart(2,"0");
+    $("tgl").value = `${t.getFullYear()}-${p(t.getMonth()+1)}-${p(t.getDate())}`;
+    $("jam").value = `${p(t.getHours())}:${p(t.getMinutes())}`;
+  })();
+
+  // ---------- peta
+  const map = L.map("map", { zoomControl:true }).setView([-0.0263,109.3425], 13);
+  let tileLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom:19, attribution:"© Esri" }).addTo(map);
+  function setBasemap(gaya){
+    map.removeLayer(tileLayer);
+    const t = TILES[gaya];
+    const url = gaya === "satelit"
+      ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+      : "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+    tileLayer = L.tileLayer(url, { maxZoom: t.max, attribution: t.attr }).addTo(map);
+    let errs = 0;
+    tileLayer.on("tileerror", () => {
+      if (++errs === 4 && gaya !== "peta"){
+        $("gaya").value = "peta";
+        setBasemap("peta");
+      }
+    });
+  }
+  let marker = null;
+  const icon = L.divIcon({ className:"", iconSize:[30,42], iconAnchor:[15,40],
+    html:'<svg width="30" height="42" viewBox="0 0 30 42"><path d="M15 41S29 24.5 29 15A14 14 0 1 0 1 15c0 9.5 14 26 14 26z" fill="#ea2837" stroke="#fff" stroke-width="2.5"/><circle cx="15" cy="15" r="5" fill="#fff"/></svg>' });
+
+  const fmt = v => (v < 0 ? "-" : "") + Math.abs(v).toFixed(6);
+
+  function setPoint(la, lo){
+    lat = la; lon = lo;
+    if (marker) marker.setLatLng([la,lo]);
+    else {
+      marker = L.marker([la,lo], { icon, draggable:true }).addTo(map);
+      marker.on("dragend", e => { const p = e.target.getLatLng(); setPoint(p.lat, p.lng); });
+    }
+    $("coord").textContent = "Lat " + fmt(la) + ", Long " + fmt(lo);
+    $("addr").textContent = "mencari alamat…";
+    reverse(la, lo);
+  }
+
+  function reverse(la, lo){
+    const u = "https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&accept-language=id&zoom=18"
+            + "&lat=" + la.toFixed(6) + "&lon=" + lo.toFixed(6);
+    fetch(u).then(r => r.json()).then(j => {
+      const a = j.address || {};
+      const kota = a.city || a.town || "";
+      const kec = a.city_district || a.suburb || "";
+      const county = a.county || "";
+      let region = "";
+      if (kota && kec && kec.toLowerCase().startsWith(kota.toLowerCase())){
+        region = /^Kota\s/i.test(kota) ? kota : "Kota " + kota;
+      } else if (county){
+        region = /^(Kabupaten|Kota)\s/i.test(county) ? county : "Kabupaten " + county;
+      } else if (kota){
+        region = /^(Kabupaten|Kota)\s/i.test(kota) ? kota : "Kota " + kota;
+      }
+      const state = a.state || "", country = a.country || "Indonesia";
+      judul = [region, state, country].filter(Boolean).join(",");
+
+      const parts = [];
+      const norm = t => t.toLowerCase().replace(/^(kota|kabupaten|kecamatan|kelurahan|desa)\s+/,"");
+      const push = v => { if (v && !parts.some(x => norm(x) === norm(v))) parts.push(v); };
+      [ a.road, a.neighbourhood, a.hamlet, a.village, a.suburb, a.city_district, kota,
+        kota ? null : region, state, country ].forEach(push);
+      alamat = parts.join(", ") || j.display_name || "";
+      $("addr").textContent = alamat || "alamat tidak ditemukan";
+    }).catch(() => { alamat = ""; judul = ""; $("addr").textContent = "alamat tidak bisa dimuat (tetap bisa dipakai)"; });
+  }
+
+  map.on("click", e => setPoint(e.latlng.lat, e.latlng.lng));
+
+  // ---------- pencarian
+  let timer = null, seq = 0;
+  $("q").addEventListener("input", () => {
+    clearTimeout(timer);
+    const q = $("q").value.trim();
+    const box = $("hasil");
+    if (q.length < 3) { box.style.display = "none"; return; }
+    timer = setTimeout(() => {
+      const my = ++seq;
+      box.innerHTML = "<div><span>mencari…</span></div>"; box.style.display = "block";
+      fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=id&countrycodes=id&q=" + encodeURIComponent(q))
+        .then(r => r.json()).then(list => {
+          if (my !== seq) return;
+          if (!list.length) { box.innerHTML = "<div><span>tidak ditemukan</span></div>"; return; }
+          box.innerHTML = "";
+          list.forEach(it => {
+            const nama = it.name || it.display_name.split(",")[0];
+            const row = document.createElement("div");
+            const b = document.createElement("b"); b.textContent = nama;
+            const s = document.createElement("span"); s.textContent = it.display_name.replace(nama,"").replace(/^,\s*/,"");
+            row.append(b, s);
+            row.onclick = () => {
+              box.style.display = "none"; $("q").value = nama; $("q").blur();
+              const la = parseFloat(it.lat), lo = parseFloat(it.lon);
+              map.flyTo([la,lo], 17, {duration:.6});
+              setTimeout(() => setPoint(la, lo), 650);
+            };
+            box.appendChild(row);
+          });
+        }).catch(() => { box.innerHTML = "<div><span>pencarian gagal</span></div>"; });
+    }, 450);
+  });
+  document.addEventListener("click", e => { if (!e.target.closest(".searchwrap")) $("hasil").style.display = "none"; });
+  $("gaya").addEventListener("change", e => setBasemap(e.target.value));
+  $("skala").addEventListener("input", e => { $("skalaval").textContent = e.target.value + "%"; });
+
+  // ---------- pilih foto
+  $("file").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    photo = null;
+    if (photoURL) URL.revokeObjectURL(photoURL);
+    photoURL = URL.createObjectURL(f);
+    const im = new Image();
+    im.onload = () => {
+      photo = im;
+      $("preview").src = photoURL;
+      $("preview").style.display = "block";
+      $("err").textContent = "";
+    };
+    im.onerror = () => { $("err").textContent = "Foto tidak bisa dibaca. Coba format JPG atau PNG."; };
+    im.src = photoURL;
+  });
+
+  // ---------- gambar
+  const FONT = 'Arial, "Helvetica Neue", Helvetica, sans-serif';
+  function wrap(ctx, text, maxW){
+    const words = text.split(/\s+/), out = []; let cur = "";
+    for (const w of words){
+      const trial = cur ? cur + " " + w : w;
+      if (ctx.measureText(trial).width <= maxW || !cur) cur = trial;
+      else { out.push(cur); cur = w; }
+    }
+    if (cur) out.push(cur);
+    return out;
+  }
+
+  function lon2tile(l, z){ return (l + 180) / 360 * Math.pow(2, z); }
+  function lat2tile(l, z){ const r = l * Math.PI/180; return (1 - Math.log(Math.tan(r) + 1/Math.cos(r))/Math.PI) / 2 * Math.pow(2, z); }
+
+  // gambar satu potongan peta; kembalikan {canvas, skor}
+  // skor = keragaman warna, dipakai untuk mendeteksi tile kosong / tidak tersedia
+  function makeMap(size, zoom, gaya){
+    return new Promise(resolve => {
+      const pr = 2, S = size * pr;
+      const z = Math.min(zoom, TILES[gaya].max);
+      const fx = lon2tile(lon, z), fy = lat2tile(lat, z);
+      const cx = fx * 256, cy = fy * 256;
+      const tx0 = Math.floor((cx - S/2) / 256), tx1 = Math.floor((cx + S/2) / 256);
+      const ty0 = Math.floor((cy - S/2) / 256), ty1 = Math.floor((cy + S/2) / 256);
+      const cols = tx1 - tx0 + 1, rows = ty1 - ty0 + 1;
+      const off = document.createElement("canvas");
+      off.width = cols * 256; off.height = rows * 256;
+      const octx = off.getContext("2d");
+      octx.fillStyle = "#e6e6e6"; octx.fillRect(0,0,off.width,off.height);
+
+      let gagal = 0, total = 0;
+      const jobs = [];
+      for (let tx = tx0; tx <= tx1; tx++){
+        for (let ty = ty0; ty <= ty1; ty++){
+          total++;
+          jobs.push(new Promise(res => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => { octx.drawImage(img, (tx-tx0)*256, (ty-ty0)*256); res(); };
+            img.onerror = () => { gagal++; res(); };
+            img.src = TILES[gaya].url(z, tx, ty);
+          }));
+        }
+      }
+      Promise.all(jobs).then(() => {
+        const out = document.createElement("canvas");
+        out.width = size; out.height = size;
+        const ctx = out.getContext("2d");
+        const sx = cx - S/2 - tx0*256, sy = cy - S/2 - ty0*256;
+        ctx.drawImage(off, sx, sy, S, S, 0, 0, size, size);
+
+        // ukur keragaman gambar (deteksi peta kosong / placeholder abu-abu)
+        let skor = 0;
+        try {
+          const d = ctx.getImageData(0, 0, size, size).data;
+          const step = Math.max(4, Math.floor(size / 40)) * 4;
+          let n = 0, sum = 0, sum2 = 0;
+          for (let i = 0; i < d.length; i += step){
+            const v = (d[i] + d[i+1] + d[i+2]) / 3;
+            sum += v; sum2 += v*v; n++;
+          }
+          const mean = sum / n;
+          skor = Math.sqrt(Math.max(0, sum2/n - mean*mean));
+        } catch (e) { skor = 0; }
+        if (gagal > total * 0.4) skor = 0;
+
+        // pin
+        const px = size/2, py = size/2, r = size*0.055;
+        ctx.save();
+        ctx.fillStyle = "rgba(60,130,246,0.28)";
+        ctx.beginPath(); ctx.moveTo(px, py + r*0.4);
+        ctx.lineTo(px - r*2.6, py + r*4.2); ctx.lineTo(px - r*0.4, py + r*4.6);
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.arc(px, py - r*1.2, r, 0, Math.PI*2);
+        ctx.fillStyle = "#ea2837"; ctx.fill();
+        ctx.lineWidth = Math.max(2, r*0.18); ctx.strokeStyle = "#fff"; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(px - r*0.72, py - r*0.25);
+        ctx.lineTo(px + r*0.72, py - r*0.25); ctx.lineTo(px, py + r*0.55);
+        ctx.closePath(); ctx.fillStyle = "#ea2837"; ctx.fill();
+        ctx.beginPath(); ctx.arc(px, py - r*1.2, r*0.38, 0, Math.PI*2); ctx.fillStyle = "#fff"; ctx.fill();
+        ctx.restore();
+
+        // atribusi
+        const a = TILES[gaya].attr;
+        const fs = Math.max(9, Math.round(size * 0.026));
+        ctx.font = fs + "px " + FONT;
+        const tw = ctx.measureText(a).width;
+        ctx.fillStyle = "rgba(0,0,0,0.45)";
+        ctx.fillRect(size - tw - fs*0.8, size - fs*1.55, tw + fs*0.7, fs*1.45);
+        ctx.fillStyle = "rgba(255,255,255,0.92)";
+        ctx.textBaseline = "top";
+        ctx.fillText(a, size - tw - fs*0.45, size - fs*1.42);
+
+        resolve({ canvas: out, skor, gagal, total });
+      });
+    });
+  }
+
+  // coba beberapa kombinasi sampai peta benar-benar ada isinya
+  async function bestMap(size, gaya){
+    const coba = gaya === "satelit"
+      ? [[19,"satelit"], [17,"satelit"], [18,"peta"], [16,"peta"]]
+      : [[19,"peta"], [17,"peta"]];
+    let hasil = null;
+    for (const [z, g] of coba){
+      const r = await makeMap(size, z, g);
+      if (!hasil || r.skor > hasil.skor) hasil = { ...r, gaya: g, zoom: z };
+      if (r.skor >= 12) break;       // sudah ada detail, berhenti
+    }
+    return hasil;
+  }
+
+  function roundRect(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+  }
+
+  function parseWhen(){
+    const d = $("tgl").value, t = $("jam").value || "00:00";
+    if (!d) return null;
+    const [Y,M,D] = d.split("-").map(Number);
+    const [h,m] = t.split(":").map(Number);
+    const dt = new Date(Y, M-1, D, h, m);
+    return { dt, label: `${HARI[dt.getDay()]}, ${D} ${BULAN[M-1]} ${Y}, ${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}, GMT+07:00` };
+  }
+
+  async function render(){
+    $("err").textContent = "";
+    if (!photo) { $("err").textContent = "Pilih foto dulu."; return; }
+    if (lat === null) { $("err").textContent = "Tentukan titik lokasi dulu."; return; }
+    const when = parseWhen();
+    if (!when) { $("err").textContent = "Isi tanggal dan jam."; return; }
+
+    $("go").textContent = "Memproses…";
+    const gaya = $("gaya").value, posisi = $("posisi").value;
+    // iOS membatasi ukuran kanvas (~16 juta piksel); foto besar diperkecil dulu
+    const MAXPX = 16000000;
+    const nw = photo.naturalWidth, nh = photo.naturalHeight;
+    const scale = Math.min(1, Math.sqrt(MAXPX / (nw * nh)));
+    const W = Math.round(nw * scale), H = Math.round(nh * scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(photo, 0, 0, W, H);
+
+    const gauge = document.createElement("canvas").getContext("2d");
+    // 100% di slider = ukuran yang sudah disepakati (setara hasil versi server)
+    const BASE = 1.25;
+    const skala = Number($("skala").value || 100) / 100;
+    let k = Math.min(Math.max((H / 2100) * BASE * skala, 0.40), 5.0);
+
+    const measure = (kk) => {
+      const margin = Math.round(20*kk), pad = Math.round(24*kk), gap = Math.round(26*kk);
+      const mapS = Math.round(300*kk);
+      const colW = W - 2*margin - 2*pad - mapS - gap;
+      const bodyPx = Math.max(13, Math.round(33*kk));
+      gauge.font = `${bodyPx}px ${FONT}`;
+      const flagW = Math.round(48*kk*1.5) + Math.round(10*kk);
+
+      let titlePx = Math.max(16, Math.round(48*kk)), titleLines = null;
+      const minOne = Math.max(15, Math.round(40*kk));
+      while (titlePx >= minOne){
+        gauge.font = `700 ${titlePx}px ${FONT}`;
+        const l = wrap(gauge, judul, colW - flagW);
+        if (l.length === 1){ titleLines = l; break; }
+        titlePx -= Math.max(1, Math.round(kk));
+      }
+      if (!titleLines){
+        titlePx = Math.max(15, Math.round(44*kk));
+        while (titlePx > Math.max(14, Math.round(30*kk))){
+          gauge.font = `700 ${titlePx}px ${FONT}`;
+          const l = wrap(gauge, judul, colW - flagW);
+          if (l.length <= 2){ titleLines = l; break; }
+          titlePx -= Math.max(1, Math.round(kk));
+        }
+        if (!titleLines){ gauge.font = `700 ${titlePx}px ${FONT}`; titleLines = wrap(gauge, judul, colW - flagW); }
+      }
+      gauge.font = `${bodyPx}px ${FONT}`;
+      const addrAll = wrap(gauge, alamat, colW);
+      let addrLines = addrAll.slice(0, 3);
+      if (addrAll.length > 3) addrLines[addrLines.length-1] = addrLines[addrLines.length-1].replace(/[ ,]+$/,"") + "…";
+
+      const lhJ = Math.round(titlePx*1.25), lhB = Math.round(bodyPx*1.42);
+      const textH = lhJ*titleLines.length + lhB*(addrLines.length + 2);
+      const panelH = Math.max(mapS, textH) + 2*pad;
+      return { margin, pad, gap, mapS, colW, bodyPx, titlePx, titleLines, addrLines, lhJ, lhB, textH, panelH, flagW };
+    };
+
+    let L = measure(k);
+    while (L.panelH > 0.30*H && k > 0.35){ k *= 0.94; L = measure(k); }
+
+    const { margin, pad, gap, mapS, colW, bodyPx, titlePx } = L;
+    const px0 = posisi === "br" ? W - margin - (mapS + gap + colW + 2*pad) : margin;
+    const py0 = H - margin - L.panelH;
+    const px1 = px0 + mapS + gap + colW + 2*pad;
+
+    ctx.fillStyle = "rgba(0,0,0,0.59)";
+    roundRect(ctx, px0, py0, px1 - px0, L.panelH, Math.round(28*k));
+    ctx.fill();
+
+    const maps = await bestMap(mapS, gaya);
+    const mimg = maps.canvas;
+    ctx.save();
+    roundRect(ctx, px0 + pad, py0 + pad, mapS, mapS, Math.round(14*k));
+    ctx.clip();
+    ctx.drawImage(mimg, px0 + pad, py0 + pad);
+    ctx.restore();
+
+    const tx = px0 + pad + mapS + gap;
+    let ty = py0 + pad + Math.max(0, (mapS - L.textH) / 2);
+
+    ctx.textBaseline = "top";
+    L.titleLines.forEach((ln, i) => {
+      ctx.font = `700 ${titlePx}px ${FONT}`;
+      ctx.fillStyle = "#fff";
+      ctx.fillText(ln, tx, ty);
+      if (i === L.titleLines.length - 1){
+        const jw = ctx.measureText(ln).width;
+        const fh = Math.round(titlePx*0.72), fw = Math.round(fh*1.5);
+        if (tx + jw + 10*k + fw < px1 - pad){
+          const fx = tx + jw + 10*k, fy = ty + titlePx*0.18;
+          ctx.fillStyle = "#ce1126"; ctx.fillRect(fx, fy, fw, fh/2);
+          ctx.fillStyle = "#fff"; ctx.fillRect(fx, fy + fh/2, fw, fh/2);
+        }
+      }
+      ty += L.lhJ;
+    });
+
+    ctx.font = `${bodyPx}px ${FONT}`;
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+    L.addrLines.forEach(ln => { ctx.fillText(ln, tx, ty); ty += L.lhB; });
+    ctx.fillText("Lat " + fmt(lat) + ", Long " + fmt(lon), tx, ty); ty += L.lhB;
+    ctx.fillText(when.label, tx, ty);
+
+    lastCanvas = canvas;
+    await applyExif(canvas, when);
+    $("save").style.display = "block";
+    $("savehint").style.display = "block";
+    $("go").textContent = "Buat stempel";
+  }
+
+  // EXIF hasil disamakan dengan stempel: GPS, tanggal, jam, zona waktu
+  function applyExif(canvas, when){
+    return new Promise(resolve => {
+      canvas.toBlob(blob => {
+        if (!blob) { resolve(); return; }
+        blob.arrayBuffer().then(buf => {
+          const d = when.dt, p = n => String(n).padStart(2,"0");
+          const dateTime = `${d.getFullYear()}:${p(d.getMonth()+1)}:${p(d.getDate())} ` +
+                           `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+          const dateStamp = `${d.getFullYear()}:${p(d.getMonth()+1)}:${p(d.getDate())}`;
+          let final = new Blob([buf], { type:"image/jpeg" });
+          try {
+            if (window.ExifWriter) {
+              const withExif = window.ExifWriter.insertExif(new Uint8Array(buf),
+                { lat, lon, dateTime, dateStamp, offset:"+07:00" });
+              final = new Blob([withExif], { type:"image/jpeg" });
+            }
+          } catch (e) { console.warn("exif gagal", e); }
+          if (outURL) URL.revokeObjectURL(outURL);
+          outURL = URL.createObjectURL(final);
+          try {
+            lastFile = new File([final], "stempel-" + Date.now() + ".jpg", { type:"image/jpeg" });
+          } catch (e) { lastFile = null; }
+          const out = $("outimg");
+          out.src = outURL;
+          out.style.display = "block";
+          out.dataset.ready = "1";
+          const info = $("exifinfo");
+          info.style.display = "block";
+          info.textContent = "EXIF ditulis: lat " + fmt(lat) + ", long " + fmt(lon) +
+            ", " + dateTime + " (" + (window.ExifWriter ? "+07:00" : "tanpa zona") + ")";
+          resolve();
+        }).catch(() => resolve());
+      }, "image/jpeg", 0.92);
+    });
+  }
+
+  $("go").addEventListener("click", () => {
+    render().catch(e => {
+      console.error(e);
+      $("err").textContent = "Gagal memproses: " + (e && e.message ? e.message : "kesalahan tidak dikenal");
+      $("go").textContent = "Buat stempel";
+    });
+  });
+
+  $("save").addEventListener("click", async () => {
+    const img = $("outimg");
+    if (!img.dataset.ready || !outURL) return;
+    // iOS: menu Bagikan punya pilihan "Simpan Gambar" yang langsung masuk ke Foto
+    if (lastFile && navigator.canShare && navigator.canShare({ files:[lastFile] })) {
+      try { await navigator.share({ files:[lastFile] }); return; } catch (e) { /* dibatalkan */ }
+    }
+    const a = document.createElement("a");
+    a.href = outURL;
+    a.download = "stempel-" + Date.now() + ".jpg";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+})();
+</script>
+</body>
+</html>
