@@ -101,6 +101,10 @@ cursor ready for a new query.
 coordinate box now stays hidden until a point exists. The result card is also hidden until
 the first stamp is made, so the page ends cleanly instead of showing an empty panel.
 
+**28-10-2026, Clear always visible.** The Clear button used to appear only after a photo was
+chosen, which made it look missing. It now sits under the photo preview from the start,
+dimmed until there is something to clear.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.
