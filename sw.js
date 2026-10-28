@@ -1,6 +1,6 @@
 // Service worker sederhana: simpan berkas sendiri agar cepat dibuka dan tetap jalan offline.
 // Permintaan ke peta dan pencarian alamat selalu lewat jaringan.
-const CACHE = "pinstamp-v1";
+const CACHE = "geostamp-v2";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-180.png"];
 
 self.addEventListener("install", (e) => {

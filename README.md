@@ -1,8 +1,8 @@
-# PinStamp
+# GeoStamp
 
 Stempel foto: peta kecil, alamat, koordinat, dan waktu, dengan EXIF yang ikut ditulis.
 
-Alamat online: https://rhezka.github.io/geotag-editor/
+Alamat online: https://rhezka.github.io/geostamp/
 
 Dipasang di iPhone: buka alamat itu di Safari, lalu Bagikan > Tambahkan ke Layar Utama.
 

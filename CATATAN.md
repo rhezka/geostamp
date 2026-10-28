@@ -52,6 +52,16 @@ perubahan logika. Foto tetap diproses di browser, tidak pernah diunggah.
   alamat selalu lewat jaringan.
 - Catatan: ini PWA, bukan UWP. Aplikasi Windows (UWP/MSIX) jalur terpisah.
 
+### 28-10-2026 — ganti merek ke GeoStamp
+
+- Merek diganti dari PinStamp menjadi **GeoStamp** atas permintaan pemilik.
+- Nama repo GitHub diganti `geotag-editor` menjadi `geostamp`; alamat halaman pindah ke
+  https://rhezka.github.io/geostamp/ . Nama folder lokal masih `geotag-editor` karena
+  terdaftar di OpenCode Manager.
+- Catatan pasar: nama GeoStamp sudah dipakai banyak aplikasi lain (App Store, Play Store).
+  Aman untuk pemakaian pribadi, tapi kalau nanti mau dipublikasikan resmi sebaiknya
+  dibuat nama yang lebih khas.
+
 ### Rollback
 
 Repo masih baru dan mandiri. Untuk kembali ke keadaan sebelum pemindahan, berkas asli

@@ -1,6 +1,6 @@
 {
-  "name": "PinStamp",
-  "short_name": "PinStamp",
+  "name": "GeoStamp",
+  "short_name": "GeoStamp",
   "description": "Stamp photos with map, address, coordinates and time.",
   "start_url": "./index.html",
   "scope": "./",
