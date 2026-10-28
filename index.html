@@ -17,8 +17,10 @@
   :root { --bg:#0f1115; --card:#161b23; --line:#28303d; --txt:#e8eaee; --dim:#8b95a7; --blue:#2f6ff2; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   body { margin:0; background:var(--bg); color:var(--txt); font-family:-apple-system,system-ui,"Segoe UI",sans-serif; padding-bottom:40px; }
-  header { padding:calc(env(safe-area-inset-top) + 14px) 16px 12px; display:flex; align-items:center;
-           justify-content:center; gap:10px; }
+  header { padding:calc(env(safe-area-inset-top) + 14px) 16px 12px; display:flex; flex-direction:column;
+           align-items:center; justify-content:center; gap:3px; }
+  .brand { display:flex; align-items:center; gap:10px; }
+  .by { font-size:12px; color:var(--dim); letter-spacing:.02em; }
   header img { width:30px; height:30px; border-radius:8px; }
   h1 { font-size:19px; margin:0; letter-spacing:.01em; }
   header p { margin:0; font-size:12.5px; color:var(--dim); }
@@ -76,8 +78,11 @@
 </head>
 <body>
 <header>
-  <img src="icon-180.png" alt="">
-  <h1>GeoStamp</h1>
+  <div class="brand">
+    <img src="icon-180.png" alt="">
+    <h1>GeoStamp</h1>
+  </div>
+  <div class="by">by rhezka</div>
 </header>
 
 <div class="card">

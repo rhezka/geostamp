@@ -1,6 +1,6 @@
 // Service worker sederhana: simpan berkas sendiri agar cepat dibuka dan tetap jalan offline.
 // Permintaan ke peta dan pencarian alamat selalu lewat jaringan.
-const CACHE = "geostamp-v4";
+const CACHE = "geostamp-v5";
 const TILE_CACHE = "geostamp-tiles";
 const TILE_HOSTS = ["tile.openstreetmap.org", "server.arcgisonline.com", "a.tile.opentopomap.org", "a.basemaps.cartocdn.com"];
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-180.png"];

@@ -92,6 +92,12 @@ perubahan logika. Foto tetap diproses di browser, tidak pernah diunggah.
   **Map Position**, dengan nilai aktif terlihat di kanan. Mengetuk membuka lembar
   pilihan dari bawah, sama seperti Add Photo.
 
+### 28-10-2026 — kredit "by rhezka"
+
+Ditambahkan baris kecil "by rhezka" di bawah judul aplikasi. Sengaja tidak dimasukkan ke
+dalam stempel foto, karena stempel dipakai untuk bukti kerja; kredit penulis di gambar
+justru bisa mengganggu. Kalau nanti ingin muncul di gambar, bisa ditambah opsi terpisah.
+
 ### Rollback
 
 Repo masih baru dan mandiri. Untuk kembali ke keadaan sebelum pemindahan, berkas asli
