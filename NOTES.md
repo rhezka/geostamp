@@ -155,6 +155,11 @@ then the address and the coordinate pair, all running beside a thin yellow rule.
 a soft shadow instead of a panel, so more of the photo stays visible. The template is
 picked from a new row on the page; Panel remains the default and is unchanged.
 
+**28-10-2026, Card typography.** The Card template now uses the system font, which is what
+the reference image used, instead of the Arial kept for the Panel template. Text is also
+constrained to roughly the left half of the frame, so the address wraps into two or three
+short lines and the right side of the photo stays clear.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.
