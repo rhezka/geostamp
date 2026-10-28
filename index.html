@@ -156,6 +156,7 @@
     <button class="picker" id="btnGaya"><span class="k">Map Style</span><span class="v" id="valGaya">Satellite</span></button>
     <button class="picker" id="btnPosisi"><span class="k">Map Position</span><span class="v" id="valPosisi">Left</span></button>
   <button class="picker" id="btnZoom"><span class="k">Map Zoom</span><span class="v" id="valZoom">Auto</span></button>
+  <button class="picker" id="btnTemplate"><span class="k">Template</span><span class="v" id="valTemplate">Panel</span></button>
   </div>
   <div style="margin-top:14px">
     <input id="skala" type="range" min="50" max="150" step="5" value="100" style="width:100%">
@@ -755,6 +756,8 @@
   const POSISI_LABEL = { bl:"Left", br:"Right" };
   const ZOOM_LABEL = { auto:"Auto", close:"Close", wide:"Wide" };
   let zoomMode = "auto";
+  const TEMPLATE_LABEL = { panel:"Panel", card:"Card" };
+  let template = "panel";
 
   $("btnGaya").addEventListener("click", () => {
     const cur = $("gaya").value;
@@ -766,6 +769,16 @@
       $("valGaya").textContent = GAYA_LABEL[v];
       setBasemap(v);
       if (lat !== null && navigator.onLine !== false) cacheTiles(lat, lon).catch(() => {});
+    });
+  });
+
+  $("btnTemplate").addEventListener("click", () => {
+    pilihOpsi("Template", [
+      { value:"card", label:"Card" },
+      { value:"panel", label:"Panel" }
+    ], template, v => {
+      template = v;
+      $("valTemplate").textContent = TEMPLATE_LABEL[v];
     });
   });
 
@@ -999,6 +1012,84 @@
     ctx.closePath();
   }
 
+  // template Card: peta di kiri atas, blok waktu dan alamat di kiri bawah
+  async function drawCard(ctx, W, H, k, when){
+    const M = Math.round(24 * k);
+    const mapS = Math.round(370 * k);
+    const maps = await bestMap(mapS, $("gaya").value);
+
+    ctx.save();
+    roundRect(ctx, M, M, mapS, mapS, Math.round(16 * k));
+    ctx.clip();
+    ctx.drawImage(maps.canvas, M, M);
+    ctx.restore();
+
+    ctx.save();
+    ctx.strokeStyle = "rgba(255,255,255,.92)";
+    ctx.lineWidth = Math.max(2, Math.round(3 * k));
+    roundRect(ctx, M, M, mapS, mapS, Math.round(16 * k));
+    ctx.stroke();
+    ctx.restore();
+
+    const fTime = Math.round(74 * k), fDate = Math.round(40 * k), fBody = Math.round(31 * k);
+    const SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const d = when.dt;
+    const dateStr = `${String(d.getDate()).padStart(2,"0")} ${SHORT[d.getMonth()]} ${d.getFullYear()}`;
+    const timeStr = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+    const coordStr = `${Math.abs(lat).toFixed(6)}\u00b0${lat < 0 ? "S" : "N"}, ` +
+                     `${Math.abs(lon).toFixed(6)}\u00b0${lon < 0 ? "W" : "E"}`;
+
+    ctx.textBaseline = "top";
+    ctx.font = `${fBody}px ${FONT}`;
+    const maxW = W - 2 * M - Math.round(26 * k);
+    const addrAll = wrap(ctx, alamat, maxW);
+    let addrLines = addrAll.slice(0, 2);
+    if (addrAll.length > 2) addrLines[addrLines.length - 1] = addrLines[addrLines.length - 1].replace(/[ ,]+$/, "") + "…";
+
+    const lhB = Math.round(fBody * 1.35);
+    const lhD = Math.round(fDate * 1.3);
+    const badgeH = Math.round(fTime * 1.32);
+    const gap1 = Math.round(16 * k), gap2 = Math.round(8 * k), gap3 = Math.round(8 * k);
+    const total = badgeH + gap1 + lhD + gap2 + addrLines.length * lhB + gap3 + lhB;
+    const bottom = H - M;
+    let y = bottom - total;
+
+    // kotak waktu
+    ctx.font = `700 ${fTime}px ${FONT}`;
+    const tw = ctx.measureText(timeStr).width;
+    const bw = tw + Math.round(30 * k);
+    ctx.fillStyle = "#ffffff";
+    roundRect(ctx, M, y, bw, badgeH, Math.round(10 * k));
+    ctx.fill();
+    ctx.fillStyle = "#1b4fd8";
+    ctx.textBaseline = "middle";
+    ctx.fillText(timeStr, M + Math.round(15 * k), y + badgeH / 2);
+    y += badgeH + gap1;
+
+    // garis kuning di kiri blok teks
+    ctx.fillStyle = "#f2c14e";
+    ctx.fillRect(M, y + Math.round(2 * k), Math.max(3, Math.round(5 * k)), bottom - y - Math.round(2 * k));
+
+    const tx = M + Math.max(14, Math.round(22 * k));
+    ctx.textBaseline = "top";
+    ctx.shadowColor = "rgba(0,0,0,.65)";
+    ctx.shadowBlur = Math.round(8 * k);
+    ctx.shadowOffsetY = Math.round(2 * k);
+
+    ctx.font = `700 ${fDate}px ${FONT}`;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(dateStr, tx, y);
+    y += lhD;
+
+    ctx.font = `${fBody}px ${FONT}`;
+    addrLines.forEach(ln => { ctx.fillText(ln, tx, y); y += lhB; });
+    ctx.fillText(coordStr, tx, y);
+
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+  }
+
   function parseWhen(){
     const d = $("tgl").value, t = $("jam").value || "00:00";
     if (!d) return null;
@@ -1036,6 +1127,16 @@
     const BASE = 1.25;
     const skala = Number($("skala").value || 100) / 100;
     let k = Math.min(Math.max((H / 2100) * BASE * skala, 0.40), 5.0);
+
+    if (template === "card"){
+      await drawCard(ctx, W, H, k, when);
+      lastCanvas = canvas;
+      await applyExif(canvas, when);
+      $("outcard").style.display = "block";
+      $("save").style.display = "block";
+      $("go").textContent = "Create Stamp";
+      return;
+    }
 
     const measure = (kk) => {
       const margin = Math.round(20*kk), pad = Math.round(24*kk), gap = Math.round(26*kk);

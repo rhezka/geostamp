@@ -149,6 +149,12 @@ the full width. The map and the text column now swap places when Right is select
 Leaflet itself — its default attribution prefix carries it — not from Esri. The prefix is
 now empty, so only the tile provider line remains.
 
+**28-10-2026, a second template.** Added Card: the map square sits at the top left with a
+thin white edge, and the lower left carries a white time badge in blue, the date in bold,
+then the address and the coordinate pair, all running beside a thin yellow rule. Text uses
+a soft shadow instead of a panel, so more of the photo stays visible. The template is
+picked from a new row on the page; Panel remains the default and is unchanged.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.
