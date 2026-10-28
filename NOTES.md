@@ -105,6 +105,11 @@ the first stamp is made, so the page ends cleanly instead of showing an empty pa
 chosen, which made it look missing. It now sits under the photo preview from the start,
 dimmed until there is something to clear.
 
+**28-10-2026, two different Clears.** I had confused them. The photo Clear now only shows
+once a photo is loaded, as before. The search box keeps its round × on the right, appears
+as soon as there is text, and Safari's own cancel button is suppressed so there is only
+one.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.
