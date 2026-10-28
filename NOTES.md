@@ -1,0 +1,81 @@
+# Notes
+
+Working log for GeoStamp, newest entries at the bottom of each section. Times are WIB
+(UTC+7).
+
+## How it started
+
+The first version was built inside the Assistant workspace, as a way to get around an
+App Store app that demanded iOS 17.6 while the phone was stuck on 17.0. Stacking an
+overlay ourselves turned out to be simpler than fighting the version gate, and the result
+looked close enough to the app that inspired it.
+
+## Decisions we settled on
+
+The stamp sits in a dark translucent panel, alpha 150 out of 255, with the map square on
+the left, a bold region line, then the address, the coordinates, and finally the day,
+date, time and GMT offset. The Indonesian flag is drawn as two small rectangles rather
+than an emoji, because the emoji does not render reliably on every platform.
+
+Size follows the photo's height, `k = height / 2100`, and the panel is never allowed to
+take more than thirty percent of the frame. In the web page that base size is multiplied
+by 1.25, which is what the slider calls one hundred percent.
+
+The default map is satellite imagery at zoom 19, with automatic fallback when tiles are
+missing. Arial is used everywhere, matching Liberation Sans on the server so both paths
+produce the same output.
+
+Every result has its EXIF rewritten: GPS latitude and longitude, DateTimeOriginal,
+DateTimeDigitized, and the plus seven offset.
+
+## Change log
+
+**28-10-2026.** First build, then dozens of small corrections. Size originally keyed off
+width, which made the panel enormous on landscape photos; switched to height. The
+browser's system font made headings grow on their own; switched to Arial. Satellite tiles
+came back blank around Sanggau; added a variance check and a fallback chain. Address lines
+lost the regency because city and village were mixed up; fixed. Downloads landed in Files
+instead of Photos; replaced with the share sheet.
+
+The project moved out of the Assistant workspace into this repository. The GitHub name
+changed from `geotag-editor` to `geostamp`, and the local folder followed. One stale entry
+remains in the Manager's repository list because its API has no delete call.
+
+The interface was rewritten in English, then trimmed: numbered labels out, stray hints
+out, native file inputs hidden so no "Choose File" text appears. Header gained a gradient,
+the icon moved to the left, the title grew, and "by rhezka" sits underneath.
+
+Map Style and Map Position became two side-by-side boxes, each with a small label and the
+current value, opening the same bottom sheet as Add Photo. Zoom controls moved to the
+bottom right after they overlapped the sticky header.
+
+Locations are remembered, but only when a stamp is actually created — pin taps and
+searches no longer pollute the list. Fifteen recent points are kept, favourites stay
+forever. Storage is `localStorage`, deliberately separate from the cache that holds tiles.
+
+Offline support arrived last. The service worker keeps two separate tile caches: one for
+CORS requests (used by the canvas) and one for opaque requests (used by Leaflet). Mixing
+them taints the canvas and breaks saving, which is why the split exists.
+
+A hit counter was added through hits.sh. It counts page openings, not unique visitors;
+the number is visible at https://hits.sh/rhezka.github.io/geostamp/
+
+## Where things live
+
+`index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.
+`tools/exif-writer.js` is the EXIF writer that also gets inlined into the page.
+`manifest.json` and `sw.js` make it installable and cacheable. Icons come in five sizes.
+
+## Rolling back
+
+Every change is a commit. To return to an earlier state, check out that commit and push.
+The site rebuilds from `main` within a minute.
+
+## Quick check
+
+```bash
+.venv/bin/python tools/stempel_foto.py --image contoh-foto-uji.jpg --out /tmp/uji.jpg \
+  --lat -0.019964 --lon 109.337110 --datetime "2026-10-28 08:11"
+
+.venv/bin/python -c "import piexif;print(piexif.load('/tmp/uji.jpg')['GPS'])"
+```

@@ -1,67 +1,101 @@
 # GeoStamp
 
-Stempel foto: peta kecil, alamat, koordinat, dan waktu, dengan EXIF yang ikut ditulis.
+A small web app that turns an ordinary photo into one carrying a map thumbnail, the
+address, the coordinates, and the time it was taken. It also writes the same location and
+time into the file's EXIF, so the picture and its metadata always agree.
 
-Alamat online: https://rhezka.github.io/geostamp/
+Open it at **https://rhezka.github.io/geostamp/**
 
-Dipasang di iPhone: buka alamat itu di Safari, lalu Bagikan > Tambahkan ke Layar Utama.
+On an iPhone, open that address in Safari and use Share → Add to Home Screen. It then
+behaves like an app: full screen, its own icon, and it still opens when the signal drops.
 
-Alat untuk mengubah foto polos menjadi foto berstempel: peta kecil, alamat, koordinat,
-dan waktu — sekaligus menulis koordinat dan waktu itu ke dalam EXIF berkas hasil.
+## What it does
 
-Ada dua bentuk:
+You pick a photo, either from the library or straight from the camera. From the camera,
+the app fills in the current time and asks for your position so the point matches where
+you are standing. From the library, you set the point yourself.
 
-- `index.html` — aplikasi satu halaman, jalan di browser HP. Tidak butuh server.
-- `tools/stempel_foto.py` — versi baris perintah, untuk memproses banyak foto sekaligus.
+A search box finds a place by name, or you can simply tap the map to drop a pin and drag
+it until it sits exactly where you want. The address, the map thumbnail, and the numbers
+all come from that one point, so nothing can drift out of sync.
 
-## Cara pakai halaman (index.html)
+Before saving you can adjust the date and time, choose between satellite imagery and a
+plain street map, decide whether the map box sits on the left or the right, and scale the
+whole stamp up or down. A hundred percent is the agreed default.
 
-1. Buka `index.html` di Safari (atau browser lain).
-2. Pilih foto dari galeri. Format HEIC dari iPhone didukung Safari.
-3. Cari tempat di kotak pencarian, atau ketuk peta untuk menaruh pin. Pin bisa digeser.
-4. Isi tanggal dan jam (bawaan: waktu sekarang, WIB).
-5. Atur ukuran stempel bila perlu. Angka 100% adalah ukuran baku.
-6. Ketuk **Buat stempel**. Hasil muncul di bawah, beserta keterangan nilai EXIF yang ditulis.
-7. Ketuk **Simpan ke Foto** (membuka menu Bagikan → Simpan Gambar), atau tekan lama
-   pada gambar hasil.
+The result appears at the bottom of the page. Tap Save to Photos to send it through the
+iOS share sheet, or press and hold the image and choose Save to Photos.
 
-Catatan: kalau dibuka di dalam panel chat Manager, penyimpanan bisa terbatas dan peta
-bisa gagal dimuat. Untuk pemakaian sebenarnya, buka di Safari.
+## Places you have used
 
-## Cara pakai versi baris perintah
+Every point that actually gets stamped is remembered on the device, along with a name.
+The last fifteen stay in the list, and any of them can be starred so it stays at the top.
+They are stored in the browser's local storage, not on any server, and they survive
+reopening the app.
+
+## Offline behaviour
+
+The page itself is cached, so it opens without a network. Map tiles are another matter:
+they have to be downloaded at some point. Whenever you set a point while online, the app
+quietly keeps the surrounding tiles. Return to that same point later without a signal and
+the map still appears. A brand new point, never opened before, will show an empty box
+until you are back online. Address lookup also needs a connection; the coordinates and
+time are written either way.
+
+## Where the map comes from
+
+The street map is OpenStreetMap, the satellite imagery is Esri World Imagery with Maxar,
+and the address lookup uses Nominatim. All three require credit, so a small attribution
+line is drawn on the map thumbnail. Please leave it there.
+
+Google Maps is deliberately not used: it needs a paid API key and its imagery may not be
+redrawn into a picture.
+
+## Running it yourself
+
+Everything is static. Serve the folder with any web server, or open `index.html`
+directly. There is no build step.
+
+The page keeps the whole stamping routine in JavaScript, including a small EXIF writer
+(`tools/exif-writer.js`, also inlined in the page) that inserts the GPS block and the
+date/time tags into the JPEG after the canvas is drawn.
+
+There is a command line version for batches:
 
 ```bash
 uv venv .venv
-uv pip install --python .venv/bin/python pillow pillow-heif piexif requests
+uv pip install --python .venv/bin/python pillow pillow-heif piexif
 
 .venv/bin/python tools/stempel_foto.py \
-  --image foto.heic --out hasil.jpg \
+  --image photo.heic --out result.jpg \
   --lat -0.019964 --lon 109.337110 \
   --datetime "2026-10-28 08:11"
 ```
 
-Opsi lain: `--gaya satelit|peta|hijau|terang`, `--zoom 19`, `--position bottom-left|bottom-right`,
-`--opacity 150`, `--tz 7`.
+Useful flags: `--gaya satelit|peta|hijau|terang`, `--zoom 19`,
+`--position bottom-left|bottom-right`, `--opacity 150`, `--tz 7`.
 
-Keluarannya JPEG dengan EXIF GPS dan waktu yang sudah disamakan dengan stempel.
-Data kamera asli (merek dan model) tetap terbawa pada jalur ini.
+## Known limits
 
-## Sumber peta dan aturan atribusi
+The address is only as complete as OpenStreetMap's data. Small alleys are often missing,
+and in some places only the village or district is known.
 
-- Peta standar: OpenStreetMap, wajib tulis "© OpenStreetMap".
-- Citra satelit: Esri World Imagery / Maxar, wajib tulis "© Esri, Maxar, Earthstar Geographics".
-- Alamat: Nominatim (OpenStreetMap).
+Satellite coverage is patchy in rural areas. The page notices empty tiles and falls back
+to another zoom level, then to the street map.
 
-Atribusi sudah dicetak kecil di pojok peta. Jangan dihapus.
+iOS caps canvas size at roughly sixteen million pixels, so very large photos are scaled
+down before drawing.
 
-Google Maps tidak dipakai karena memerlukan API berbayar dan citranya tidak boleh
-dicetak ulang ke dalam gambar.
+The browser path writes GPS and time into EXIF but not the camera make and model, because
+browsers cannot read that from a HEIC file. The command line version keeps the original
+camera tags.
 
-## Batasan yang perlu diketahui
+## Visits
 
-- Kelengkapan alamat bergantung data OpenStreetMap. Gang kecil bisa belum terdaftar.
-- Citra satelit tidak tersedia di semua lokasi. Halaman otomatis mundur ke zoom lain
-  lalu ke peta standar.
-- iOS membatasi ukuran kanvas sekitar 16 juta piksel. Foto yang lebih besar diperkecil
-  dulu sebelum digambar.
-- Jalur browser hanya menulis GPS dan waktu ke EXIF, bukan merek dan model kamera.
+A tiny counter records page openings. It counts openings, not distinct people, so treat
+the number as a rough signal rather than an audience measurement. The figure is public at
+https://hits.sh/rhezka.github.io/geostamp/
+
+## Credit
+
+Built by rhezka.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tempelkan stempel peta + alamat + koordinat + waktu pada foto.
+"""Stamp a photo with map, address, coordinates and time.
 
 Peta dan alamat diambil dari titik koordinat yang sama, jadi selalu sinkron.
 Peta: OpenStreetMap (wajib atribusi). Alamat: Nominatim (OSM).
