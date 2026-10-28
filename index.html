@@ -451,6 +451,26 @@
 
   // ---------- pencarian
   let timer = null, seq = 0;
+  // tempel koordinat langsung di kotak pencarian, mis. -0.347755,109.4402867
+  function parseCoords(raw){
+    let t = raw.trim().replace(/\b(lat|latitude|long|longitude|lon)\b/gi, " ").replace(/\s+/g, " ").trim();
+    // gaya derajat + arah, mis. 0.347S 109.44E
+    const h = t.match(/^(\d+(?:\.\d+)?)\s*°?\s*([NS])\s*[,\s]*\s*(\d+(?:\.\d+)?)\s*°?\s*([EW])$/i);
+    if (h){
+      let la = parseFloat(h[1]), lo = parseFloat(h[3]);
+      if (h[2].toUpperCase() === "S") la = -la;
+      if (h[4].toUpperCase() === "W") lo = -lo;
+      if (Math.abs(la) <= 90 && Math.abs(lo) <= 180) return { lat: la, lon: lo };
+    }
+    const parts = t.split(/[,;\s]+/).filter(Boolean);
+    if (parts.length === 2){
+      const la = parseFloat(parts[0]), lo = parseFloat(parts[1]);
+      if (isFinite(la) && isFinite(lo) && Math.abs(la) <= 90 && Math.abs(lo) <= 180)
+        return { lat: la, lon: lo, exact: true };
+    }
+    return null;
+  }
+
   function updateClear(){
     $("qclear").classList.toggle("show", $("q").value.length > 0);
   }
@@ -468,6 +488,14 @@
     const q = $("q").value.trim();
     const box = $("hasil");
     if (q.length < 3) { box.style.display = "none"; return; }
+    const c = parseCoords(q);
+    if (c){
+      $("hasil").style.display = "none";
+      map.flyTo([c.lat, c.lon], 17, { duration:.6 });
+      setTimeout(() => setPoint(c.lat, c.lon), 650);
+      return;
+    }
+
     timer = setTimeout(() => {
       const my = ++seq;
       box.innerHTML = "<div><span>mencari…</span></div>"; box.style.display = "block";

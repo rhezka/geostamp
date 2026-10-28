@@ -116,6 +116,11 @@ the date. exifr (MIT, 76 KB) is vendored locally rather than pulled from a CDN s
 offline and adds no third-party request. Dates are shown in WIB. Camera captures still use
 the current moment, and a photo without EXIF simply leaves the defaults alone.
 
+**28-10-2026, pasting coordinates.** The search box now accepts a coordinate pair directly.
+Decimal pairs like `-0.347755,109.4402867` and hemisphere forms like `0.347S 109.44E` are
+recognised before any lookup is attempted, so nothing is sent to Nominatim for a point we
+already have. The order is latitude first, and values outside valid ranges are ignored.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.
