@@ -78,6 +78,11 @@ spread of 0. The filter now only discards tiles that are both very flat and very
 Street maps keep a higher score threshold than satellite, since a patch of open sea is a
 legitimate, featureless image.
 
+**28-10-2026, zoom choice.** Ship inspections often happen at sea or at Jungkat, where
+high zoom satellite is patchy. Added a Map Zoom row with three settings: Close tries 19
+then 18, Auto tries 19, 18 and 17, and Wide starts at 17 and can drop to 15 so the
+coastline stays in frame.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.

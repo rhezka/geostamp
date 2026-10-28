@@ -131,6 +131,7 @@
   <div class="row">
     <button class="picker" id="btnGaya"><span class="k">Map Style</span><span class="v" id="valGaya">Satellite</span></button>
     <button class="picker" id="btnPosisi"><span class="k">Map Position</span><span class="v" id="valPosisi">Left</span></button>
+  <button class="picker" id="btnZoom"><span class="k">Map Zoom</span><span class="v" id="valZoom">Auto</span></button>
   </div>
   <div style="margin-top:14px">
     <input id="skala" type="range" min="50" max="150" step="5" value="100" style="width:100%">
@@ -634,6 +635,8 @@
 
   const GAYA_LABEL = { satelit:"Satellite", peta:"Street" };
   const POSISI_LABEL = { bl:"Left", br:"Right" };
+  const ZOOM_LABEL = { auto:"Auto", close:"Close", wide:"Wide" };
+  let zoomMode = "auto";
 
   $("btnGaya").addEventListener("click", () => {
     const cur = $("gaya").value;
@@ -645,6 +648,17 @@
       $("valGaya").textContent = GAYA_LABEL[v];
       setBasemap(v);
       if (lat !== null && navigator.onLine !== false) cacheTiles(lat, lon).catch(() => {});
+    });
+  });
+
+  $("btnZoom").addEventListener("click", () => {
+    pilihOpsi("Map Zoom", [
+      { value:"close", label:"Close" },
+      { value:"auto", label:"Auto" },
+      { value:"wide", label:"Wide" }
+    ], zoomMode, v => {
+      zoomMode = v;
+      $("valZoom").textContent = ZOOM_LABEL[v];
     });
   });
 
@@ -832,9 +846,15 @@
 
   // coba beberapa kombinasi; pilih yang benar-benar ada isinya
   async function bestMap(size, gaya){
+    const sat = zoomMode === "close" ? [19, 18]
+               : zoomMode === "wide" ? [17, 16, 15]
+               : [19, 18, 17];
+    const str = zoomMode === "close" ? [19, 18]
+               : zoomMode === "wide" ? [16, 15, 14]
+               : [18, 16, 15];
     const coba = gaya === "satelit"
-      ? [[19,"satelit"], [18,"satelit"], [17,"satelit"], [18,"peta"], [16,"peta"]]
-      : [[19,"peta"], [18,"peta"], [16,"peta"]];
+      ? [...sat.map(z => [z, "satelit"]), ...str.slice(0, 2).map(z => [z, "peta"])]
+      : [...str.map(z => [z, "peta"]), [18, "satelit"]];
     let hasil = null;
     for (const [z, g] of coba){
       const r = await makeMap(size, z, g);
