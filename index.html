@@ -55,6 +55,14 @@
   .hint { font-size:12px; color:var(--dim); line-height:1.5; margin-top:10px; }
   .pill { display:inline-block; font-size:11px; padding:3px 9px; border-radius:99px; background:#20304d; color:#9ec1ff; }
   .err { color:#ff8a8a; font-size:13px; margin-top:10px; }
+  .sheet { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:flex-end;
+           padding:12px; z-index:3000; }
+  .sheet.show { display:flex; }
+  .sheet .inner { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:12px; width:100%; }
+  .sheet button { margin-top:10px; }
+  .sheet button:first-child { margin-top:0; }
+  .rowline { display:flex; gap:10px; margin-top:10px; }
+  .rowline button { margin-top:0; }
 </style>
 </head>
 <body>
@@ -63,13 +71,13 @@
 </header>
 
 <div class="card">
-  <div class="row">
-    <label class="filebtn" for="file">Gallery</label>
-    <label class="filebtn" for="cam">Camera</label>
-  </div>
+  <button id="addbtn">Add Photo</button>
   <input id="file" type="file" accept="image/*,.heic,.heif">
   <input id="cam" type="file" accept="image/*" capture="environment">
   <img id="preview" alt="">
+  <div class="rowline" id="afterpick" style="display:none">
+    <button id="clear" class="ghost">Clear</button>
+  </div>
 </div>
 
 <div class="card">
@@ -109,6 +117,14 @@
   <img id="outimg" alt="">
   <button id="save" style="display:none">Save to Photos</button>
   <div class="hint" id="exifinfo" style="display:none"></div>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="inner">
+    <button data-pick="cam">Camera</button>
+    <button data-pick="file" class="ghost">Choose from Library</button>
+    <button data-close class="ghost">Cancel</button>
+  </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -412,6 +428,7 @@
       photo = im;
       $("preview").src = photoURL;
       $("preview").style.display = "block";
+      $("afterpick").style.display = "flex";
       $("err").textContent = "";
       if (dariKamera) useNow();
     };
@@ -440,6 +457,36 @@
 
   $("file").addEventListener("change", e => loadPhoto(e.target.files && e.target.files[0], false));
   $("cam").addEventListener("change", e => loadPhoto(e.target.files && e.target.files[0], true));
+
+  // satu tombol, pilihan muncul setelah diketuk
+  const sheet = $("sheet");
+  const tutupSheet = () => sheet.classList.remove("show");
+  $("addbtn").addEventListener("click", () => sheet.classList.add("show"));
+  sheet.addEventListener("click", e => {
+    const pick = e.target.getAttribute && e.target.getAttribute("data-pick");
+    if (pick){ tutupSheet(); $(pick).click(); return; }
+    if (e.target === sheet || (e.target.hasAttribute && e.target.hasAttribute("data-close"))) tutupSheet();
+  });
+
+  function clearAll(){
+    photo = null; lastCanvas = null; lastFile = null;
+    if (photoURL){ URL.revokeObjectURL(photoURL); photoURL = null; }
+    if (outURL){ URL.revokeObjectURL(outURL); outURL = null; }
+    $("preview").removeAttribute("src"); $("preview").style.display = "none";
+    $("outimg").removeAttribute("src"); $("outimg").style.display = "none";
+    $("outimg").dataset.ready = "";
+    $("save").style.display = "none";
+    $("exifinfo").style.display = "none";
+    $("afterpick").style.display = "none";
+    $("err").textContent = "";
+    $("file").value = ""; $("cam").value = "";
+    // titik ikut dibersihkan
+    lat = null; lon = null; alamat = ""; judul = "";
+    if (marker){ map.removeLayer(marker); marker = null; }
+    $("coord").textContent = "Tap the map to set a point";
+    $("addr").textContent = "";
+  }
+  $("clear").addEventListener("click", clearAll);
 
   // ---------- gambar
   const FONT = 'Arial, "Helvetica Neue", Helvetica, sans-serif';

@@ -62,6 +62,16 @@ perubahan logika. Foto tetap diproses di browser, tidak pernah diunggah.
   Aman untuk pemakaian pribadi, tapi kalau nanti mau dipublikasikan resmi sebaiknya
   dibuat nama yang lebih khas.
 
+### 28-10-2026 — satu tombol foto, tombol Clear, repo pindah
+
+- Tombol Gallery dan Camera digabung menjadi satu tombol **Add Photo**; pilihan
+  Camera / Choose from Library muncul sebagai lembar bawah setelah diketuk.
+- Tambah tombol **Clear** untuk mengosongkan foto, titik, dan hasil sekaligus.
+- Repo lokal dipindah ke `/workspace/repos/geostamp` (id 14 di Manager). Folder lama
+  `geotag-editor` dihapus. Entri repo lama (id 13) masih tersisa di daftar Manager
+  karena tidak ada API untuk menghapus; bisa dibersihkan dari halaman Repos di Manager.
+- Situs tetap di https://rhezka.github.io/geostamp/ .
+
 ### Rollback
 
 Repo masih baru dan mandiri. Untuk kembali ke keadaan sebelum pemindahan, berkas asli
