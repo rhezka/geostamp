@@ -60,6 +60,16 @@ them taints the canvas and breaks saving, which is why the split exists.
 A hit counter was added through hits.sh. It counts page openings, not unique visitors;
 the number is visible at https://hits.sh/rhezka.github.io/geostamp/
 
+**28-10-2026, satellite gaps.** Some photos came out with an empty map box while the
+street map worked. Measuring tiles by hand explained it: around Sanggau the zoom 19 Esri
+tile scores 3.6 on colour variance, a grey placeholder, while zoom 18 scores 36.7. Real
+imagery sits between 17 and 41. So the app now rejects any tile below 8, loads at most six
+at a time with one retry, and steps down through 19, 18 and 17 before falling back to the
+street map. A map is only accepted when at least eighty-five percent of its tiles are real.
+
+The repository description on GitHub was still Indonesian; changed to English, homepage
+and topics added.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.

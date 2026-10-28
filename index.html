@@ -705,100 +705,139 @@
   function lon2tile(l, z){ return (l + 180) / 360 * Math.pow(2, z); }
   function lat2tile(l, z){ const r = l * Math.PI/180; return (1 - Math.log(Math.tan(r) + 1/Math.cos(r))/Math.PI) / 2 * Math.pow(2, z); }
 
-  // gambar satu potongan peta; kembalikan {canvas, skor}
-  // skor = keragaman warna, dipakai untuk mendeteksi tile kosong / tidak tersedia
-  function makeMap(size, zoom, gaya){
+  // ambil satu tile; dicoba dua kali karena penyedia kadang menolak saat ramai
+  function loadTile(url, tries){
+    tries = tries || 2;
     return new Promise(resolve => {
-      const pr = 2, S = size * pr;
-      const z = Math.min(zoom, TILES[gaya].max);
-      const fx = lon2tile(lon, z), fy = lat2tile(lat, z);
-      const cx = fx * 256, cy = fy * 256;
-      const tx0 = Math.floor((cx - S/2) / 256), tx1 = Math.floor((cx + S/2) / 256);
-      const ty0 = Math.floor((cy - S/2) / 256), ty1 = Math.floor((cy + S/2) / 256);
-      const cols = tx1 - tx0 + 1, rows = ty1 - ty0 + 1;
-      const off = document.createElement("canvas");
-      off.width = cols * 256; off.height = rows * 256;
-      const octx = off.getContext("2d");
-      octx.fillStyle = "#e6e6e6"; octx.fillRect(0,0,off.width,off.height);
-
-      let gagal = 0, total = 0;
-      const jobs = [];
-      for (let tx = tx0; tx <= tx1; tx++){
-        for (let ty = ty0; ty <= ty1; ty++){
-          total++;
-          jobs.push(new Promise(res => {
-            const img = new Image();
-            img.crossOrigin = "anonymous";
-            img.onload = () => { octx.drawImage(img, (tx-tx0)*256, (ty-ty0)*256); res(); };
-            img.onerror = () => { gagal++; res(); };
-            img.src = TILES[gaya].url(z, tx, ty);
-          }));
-        }
-      }
-      Promise.all(jobs).then(() => {
-        const out = document.createElement("canvas");
-        out.width = size; out.height = size;
-        const ctx = out.getContext("2d");
-        const sx = cx - S/2 - tx0*256, sy = cy - S/2 - ty0*256;
-        ctx.drawImage(off, sx, sy, S, S, 0, 0, size, size);
-
-        // ukur keragaman gambar (deteksi peta kosong / placeholder abu-abu)
-        let skor = 0;
-        try {
-          const d = ctx.getImageData(0, 0, size, size).data;
-          const step = Math.max(4, Math.floor(size / 40)) * 4;
-          let n = 0, sum = 0, sum2 = 0;
-          for (let i = 0; i < d.length; i += step){
-            const v = (d[i] + d[i+1] + d[i+2]) / 3;
-            sum += v; sum2 += v*v; n++;
-          }
-          const mean = sum / n;
-          skor = Math.sqrt(Math.max(0, sum2/n - mean*mean));
-        } catch (e) { skor = 0; }
-        if (gagal > total * 0.4) skor = 0;
-
-        // pin
-        const px = size/2, py = size/2, r = size*0.055;
-        ctx.save();
-        ctx.fillStyle = "rgba(60,130,246,0.28)";
-        ctx.beginPath(); ctx.moveTo(px, py + r*0.4);
-        ctx.lineTo(px - r*2.6, py + r*4.2); ctx.lineTo(px - r*0.4, py + r*4.6);
-        ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.arc(px, py - r*1.2, r, 0, Math.PI*2);
-        ctx.fillStyle = "#ea2837"; ctx.fill();
-        ctx.lineWidth = Math.max(2, r*0.18); ctx.strokeStyle = "#fff"; ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(px - r*0.72, py - r*0.25);
-        ctx.lineTo(px + r*0.72, py - r*0.25); ctx.lineTo(px, py + r*0.55);
-        ctx.closePath(); ctx.fillStyle = "#ea2837"; ctx.fill();
-        ctx.beginPath(); ctx.arc(px, py - r*1.2, r*0.38, 0, Math.PI*2); ctx.fillStyle = "#fff"; ctx.fill();
-        ctx.restore();
-
-        // atribusi
-        const a = TILES[gaya].attr;
-        const fs = Math.max(9, Math.round(size * 0.026));
-        ctx.font = fs + "px " + FONT;
-        const tw = ctx.measureText(a).width;
-        ctx.fillStyle = "rgba(0,0,0,0.45)";
-        ctx.fillRect(size - tw - fs*0.8, size - fs*1.55, tw + fs*0.7, fs*1.45);
-        ctx.fillStyle = "rgba(255,255,255,0.92)";
-        ctx.textBaseline = "top";
-        ctx.fillText(a, size - tw - fs*0.45, size - fs*1.42);
-
-        resolve({ canvas: out, skor, gagal, total });
-      });
+      let n = 0;
+      const coba = () => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = () => {
+          if (++n < tries) setTimeout(coba, 250 + n * 250);
+          else resolve(null);
+        };
+        img.src = url;
+      };
+      coba();
     });
   }
 
-  // coba beberapa kombinasi sampai peta benar-benar ada isinya
+  // tile kosong / placeholder punya warna nyaris rata; tile asli punya variasi
+  function tileQuality(img){
+    try {
+      const S = 40, c = document.createElement("canvas");
+      c.width = S; c.height = S;
+      const x = c.getContext("2d");
+      x.drawImage(img, 0, 0, S, S);
+      const d = x.getImageData(0, 0, S, S).data;
+      let sum = 0, sum2 = 0, n = 0;
+      for (let i = 0; i < d.length; i += 4){
+        const v = (d[i] + d[i+1] + d[i+2]) / 3;
+        sum += v; sum2 += v*v; n++;
+      }
+      const mean = sum / n;
+      return Math.sqrt(Math.max(0, sum2/n - mean*mean));
+    } catch (e) { return 99; }
+  }
+
+  // gambar satu potongan peta; hasil menyertakan skor kualitas
+  async function makeMap(size, zoom, gaya){
+    const pr = 2, S = size * pr;
+    const z = Math.min(zoom, TILES[gaya].max);
+    const fx = lon2tile(lon, z), fy = lat2tile(lat, z);
+    const cx = fx * 256, cy = fy * 256;
+    const tx0 = Math.floor((cx - S/2) / 256), tx1 = Math.floor((cx + S/2) / 256);
+    const ty0 = Math.floor((cy - S/2) / 256), ty1 = Math.floor((cy + S/2) / 256);
+    const cols = tx1 - tx0 + 1, rows = ty1 - ty0 + 1;
+
+    const off = document.createElement("canvas");
+    off.width = cols * 256; off.height = rows * 256;
+    const octx = off.getContext("2d");
+    octx.fillStyle = "#dfe3e8"; octx.fillRect(0, 0, off.width, off.height);
+
+    // daftar pekerjaan, lalu dijalankan maksimal enam sekaligus
+    const jobs = [];
+    for (let tx = tx0; tx <= tx1; tx++)
+      for (let ty = ty0; ty <= ty1; ty++)
+        jobs.push({ tx, ty, url: TILES[gaya].url(z, tx, ty) });
+
+    let valid = 0, total = jobs.length;
+    const worker = async () => {
+      while (jobs.length){
+        const j = jobs.shift();
+        const img = await loadTile(j.url);
+        if (!img) continue;
+        if (tileQuality(img) < 8) continue;          // tile kosong / placeholder, lewati
+        octx.drawImage(img, (j.tx - tx0) * 256, (j.ty - ty0) * 256);
+        valid++;
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(6, total) }, worker));
+
+    const out = document.createElement("canvas");
+    out.width = size; out.height = size;
+    const ctx = out.getContext("2d");
+    const sx = cx - S/2 - tx0*256, sy = cy - S/2 - ty0*256;
+    ctx.drawImage(off, sx, sy, S, S, 0, 0, size, size);
+
+    let skor = 0;
+    try {
+      const d = ctx.getImageData(0, 0, size, size).data;
+      const step = Math.max(4, Math.floor(size / 40)) * 4;
+      let n = 0, sum = 0, sum2 = 0;
+      for (let i = 0; i < d.length; i += step){
+        const v = (d[i] + d[i+1] + d[i+2]) / 3;
+        sum += v; sum2 += v*v; n++;
+      }
+      const mean = sum / n;
+      skor = Math.sqrt(Math.max(0, sum2/n - mean*mean));
+    } catch (e) { skor = 0; }
+
+    skor = skor * (valid / total);                   // tile bolong menurunkan skor
+
+    // pin
+    const px = size/2, py = size/2, r = size*0.055;
+    ctx.save();
+    ctx.fillStyle = "rgba(60,130,246,0.28)";
+    ctx.beginPath(); ctx.moveTo(px, py + r*0.4);
+    ctx.lineTo(px - r*2.6, py + r*4.2); ctx.lineTo(px - r*0.4, py + r*4.6);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.arc(px, py - r*1.2, r, 0, Math.PI*2);
+    ctx.fillStyle = "#ea2837"; ctx.fill();
+    ctx.lineWidth = Math.max(2, r*0.18); ctx.strokeStyle = "#fff"; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px - r*0.72, py - r*0.25);
+    ctx.lineTo(px + r*0.72, py - r*0.25); ctx.lineTo(px, py + r*0.55);
+    ctx.closePath(); ctx.fillStyle = "#ea2837"; ctx.fill();
+    ctx.beginPath(); ctx.arc(px, py - r*1.2, r*0.38, 0, Math.PI*2); ctx.fillStyle = "#fff"; ctx.fill();
+    ctx.restore();
+
+    // atribusi
+    const a = TILES[gaya].attr;
+    const fs = Math.max(9, Math.round(size * 0.026));
+    ctx.font = fs + "px " + FONT;
+    const tw = ctx.measureText(a).width;
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.fillRect(size - tw - fs*0.8, size - fs*1.55, tw + fs*0.7, fs*1.45);
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.textBaseline = "top";
+    ctx.fillText(a, size - tw - fs*0.45, size - fs*1.42);
+
+    return { canvas: out, skor, valid, total, gaya, zoom: z };
+  }
+
+  // coba beberapa kombinasi; pilih yang benar-benar ada isinya
   async function bestMap(size, gaya){
     const coba = gaya === "satelit"
-      ? [[19,"satelit"], [17,"satelit"], [18,"peta"], [16,"peta"]]
-      : [[19,"peta"], [17,"peta"]];
+      ? [[19,"satelit"], [18,"satelit"], [17,"satelit"], [18,"peta"], [16,"peta"]]
+      : [[19,"peta"], [18,"peta"], [16,"peta"]];
     let hasil = null;
     for (const [z, g] of coba){
       const r = await makeMap(size, z, g);
-      if (!hasil || r.skor > hasil.skor) hasil = { ...r, gaya: g, zoom: z };
-      if (r.skor >= 12) break;       // sudah ada detail, berhenti
+      const layak = r.valid / r.total >= 0.85 && r.skor >= 12;
+      if (!hasil || r.skor > hasil.skor) hasil = r;
+      if (layak) return r;
     }
     return hasil;
   }
