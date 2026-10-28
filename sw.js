@@ -1,6 +1,6 @@
 // Service worker sederhana: simpan berkas sendiri agar cepat dibuka dan tetap jalan offline.
 // Permintaan ke peta dan pencarian alamat selalu lewat jaringan.
-const CACHE = "geostamp-v15";
+const CACHE = "geostamp-v16";
 const TILE_CACHE = "geostamp-tiles";
 const TILE_HOSTS = ["tile.openstreetmap.org", "server.arcgisonline.com", "a.tile.opentopomap.org", "a.basemaps.cartocdn.com"];
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-180.png"];
@@ -19,6 +19,22 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
+
+  // halaman: selalu ambil versi terbaru dari jaringan, cache hanya untuk keadaan offline
+  if (e.request.mode === "navigate" || (url.origin === location.origin && url.pathname.endsWith("/"))) {
+    e.respondWith((async () => {
+      try {
+        const fresh = await fetch(e.request, { cache: "no-store" });
+        const c = await caches.open(CACHE);
+        c.put(e.request, fresh.clone()).catch(() => {});
+        return fresh;
+      } catch (err) {
+        const hit = await caches.match(e.request);
+        return hit || caches.match("./index.html");
+      }
+    })());
+    return;
+  }
 
   // tile peta: pisahkan cache untuk permintaan CORS (dipakai kanvas) dan opaque
   // (dipakai peta Leaflet). Mencampur keduanya membuat kanvas jadi tercemar.

@@ -83,6 +83,16 @@ high zoom satellite is patchy. Added a Map Zoom row with three settings: Close t
 then 18, Auto tries 19, 18 and 17, and Wide starts at 17 and can drop to 15 so the
 coastline stays in frame.
 
+**28-10-2026, still grey boxes.** The Jungkat photo still had light rectangles. Checking
+the tiles by hand showed why: at zoom 19 every tile is a flat placeholder (mean 205), and
+at zoom 18 the placeholders average 145–155 — close enough to a sandbar that a brightness
+test cannot separate them.
+
+Two fixes. The service worker now fetches the page from the network first, so a new build
+reaches the phone on the next open instead of being served from cache indefinitely; that
+alone explained most of the "still broken" reports. And a satellite map is only accepted
+when every tile is real, otherwise the app steps down a zoom or switches to the street map.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.

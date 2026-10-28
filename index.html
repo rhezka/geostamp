@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GeoStamp">
+<meta name="app-version" content="v16">
 <meta name="description" content="Stamp photos with map, address, coordinates and time.">
 <title>GeoStamp</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -859,7 +860,7 @@
     for (const [z, g] of coba){
       const r = await makeMap(size, z, g);
       const batas = g === "peta" ? 8 : 4;          // peta laut boleh nyaris rata
-      const layak = r.valid / r.total >= 0.85 && r.skor >= batas;
+      const layak = r.valid / r.total >= 0.95 && r.skor >= batas;
       if (!hasil || r.skor > hasil.skor) hasil = r;
       if (layak) return r;
     }
