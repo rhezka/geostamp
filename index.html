@@ -431,7 +431,6 @@
         kota ? null : region, state, country ].forEach(push);
       alamat = parts.join(", ") || j.display_name || "";
       $("addr").textContent = alamat || "address not found";
-      addRecent(la, lo, namaSingkat());
     }).catch(() => { alamat = ""; judul = ""; $("addr").textContent = "address unavailable"; });
   }
 
@@ -829,6 +828,9 @@
     if (lat === null) { $("err").textContent = "Set the location point first."; return; }
     const when = parseWhen();
     if (!when) { $("err").textContent = "Select date and time."; return; }
+
+    // simpan ke riwayat hanya saat lokasi benar-benar dipakai untuk membuat stempel
+    addRecent(lat, lon, namaSingkat());
 
     $("go").textContent = "Working…";
     const gaya = $("gaya").value, posisi = $("posisi").value;

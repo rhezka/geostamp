@@ -127,6 +127,16 @@ bawaan iOS ikut gelap.
   ketuk bintang untuk menjadikannya favorit (selalu di atas).
 - Tampilan awal peta tetap Pontianak (tetap di kode), tidak diubah.
 
+### 28-10-2026 — riwayat hanya saat lokasi dipakai
+
+Sebelumnya setiap ketukan pin ikut tercatat. Sekarang `addRecent()` hanya dipanggil di
+dalam `render()`, yaitu saat stempel benar-benar dibuat. Kamera dan pin manual sama
+perlakuannya.
+
+Penyimpanan memakai `localStorage` (bukan Cache Storage). Bedanya: `localStorage` untuk
+data kecil seperti daftar lokasi dan bertahan sampai dihapus; Cache Storage dipakai untuk
+berkas halaman dan tile peta.
+
 ### Rollback
 
 Repo masih baru dan mandiri. Untuk kembali ke keadaan sebelum pemindahan, berkas asli
