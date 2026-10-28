@@ -368,7 +368,8 @@
   })();
 
   // ---------- peta
-  const map = L.map("map", { zoomControl:false }).setView([-0.0263,109.3425], 13);
+  const map = L.map("map", { zoomControl:false, attributionControl:false }).setView([-0.0263,109.3425], 13);
+  L.control.attribution({ prefix:false }).addTo(map);   // tanpa awalan bawaan Leaflet
   L.control.zoom({ position:"bottomright" }).addTo(map);
   let tileLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     { maxZoom:19, attribution:"© Esri" }).addTo(map);

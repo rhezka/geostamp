@@ -145,6 +145,10 @@ unstarring it first — a deliberate guard against wiping a place that matters b
 square was always drawn at the left edge of the panel, even though the panel itself spans
 the full width. The map and the text column now swap places when Right is selected.
 
+**28-10-2026, attribution prefix removed.** The Ukrainian flag in the corner came from
+Leaflet itself — its default attribution prefix carries it — not from Esri. The prefix is
+now empty, so only the tile provider line remains.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.
