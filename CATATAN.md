@@ -106,6 +106,13 @@ justru bisa mengganggu. Kalau nanti ingin muncul di gambar, bisa ditambah opsi t
   dua baris: label kecil di atas, nilai aktif di bawah (Satellite/Street, Left/Right).
 - Teks nilai dipendekkan: "Street" dan "Left"/"Right" tanpa kata Map.
 
+### 28-10-2026 — header vs kontrol peta, tombol lebih terlihat
+
+- Header dinaikkan ke z-index 1200 supaya tidak tertimpa tombol zoom Leaflet.
+- Kontrol zoom dipindah ke kanan bawah agar jauh dari header.
+- Kotak Map Style dan Map Position diberi latar lebih terang dan tanda ⌄ di kanan,
+  supaya jelas bisa diketuk.
+
 ### Rollback
 
 Repo masih baru dan mandiri. Untuk kembali ke keadaan sebelum pemindahan, berkas asli

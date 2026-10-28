@@ -19,7 +19,7 @@
   body { margin:0; background:var(--bg); color:var(--txt); font-family:-apple-system,system-ui,"Segoe UI",sans-serif; padding-bottom:40px; }
   header { padding:calc(env(safe-area-inset-top) + 16px) 16px 16px; display:flex; align-items:center;
            gap:13px; background:linear-gradient(160deg,#1c2635 0%,#141a23 55%,#0f1319 100%);
-           border-bottom:1px solid var(--line); position:sticky; top:0; z-index:900; }
+           border-bottom:1px solid var(--line); position:sticky; top:0; z-index:1200; }
   header img { width:46px; height:46px; border-radius:12px; box-shadow:0 4px 14px rgba(0,0,0,.45); }
   .titles { display:flex; flex-direction:column; gap:1px; }
   .by { font-size:13px; color:#a7b3c6; letter-spacing:.01em; }
@@ -62,9 +62,12 @@
   .pill { display:inline-block; font-size:11px; padding:3px 9px; border-radius:99px; background:#20304d; color:#9ec1ff; }
   .err { color:#ff8a8a; font-size:13px; margin-top:10px; }
   .picker { display:flex; flex-direction:column; align-items:flex-start; gap:2px; width:100%;
-            padding:11px 13px; border-radius:12px; border:1px solid var(--line); background:#1a1f28;
-            color:var(--txt); font-family:inherit; font-size:15px; text-align:left; }
-  .picker:active { background:#202834; }
+            padding:11px 30px 11px 13px; border-radius:12px; border:1px solid #37455c;
+            background:#222c3b; color:var(--txt); font-family:inherit; font-size:15px;
+            text-align:left; position:relative; box-shadow:0 1px 0 rgba(255,255,255,.04) inset; }
+  .picker:active { background:#2a3648; }
+  .picker::after { content:"⌄"; position:absolute; right:12px; top:50%; transform:translateY(-50%);
+                   color:#93a6c2; font-size:17px; line-height:1; }
   .picker .k { color:var(--dim); font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; }
   .picker .v { font-weight:600; font-size:15px; color:#fff; }
   .sheet { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:flex-end;
@@ -333,7 +336,8 @@
   })();
 
   // ---------- peta
-  const map = L.map("map", { zoomControl:true }).setView([-0.0263,109.3425], 13);
+  const map = L.map("map", { zoomControl:false }).setView([-0.0263,109.3425], 13);
+  L.control.zoom({ position:"bottomright" }).addTo(map);
   let tileLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     { maxZoom:19, attribution:"© Esri" }).addTo(map);
   function setBasemap(gaya){
