@@ -1,5 +1,6 @@
 import SwiftUI
 import WebKit
+import Photos
 
 @main
 struct GeoStampApp: App {
@@ -15,6 +16,12 @@ struct ContentView: UIViewRepresentable {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
+
+        // izinkan halaman file:// memanggil layanan luar (peta dan pencarian alamat)
+        config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
+        config.setValue(true, forKey: "allowUniversalAccessFromFileURLs")
+
+        config.userContentController.add(context.coordinator, name: "savePhoto")
 
         let web = WKWebView(frame: .zero, configuration: config)
         web.isOpaque = false
@@ -37,7 +44,7 @@ struct ContentView: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
         // izin kamera/galeri untuk input file di dalam webview
         func webView(_ webView: WKWebView,
                      requestMediaCapturePermissionFor origin: WKSecurityOrigin,
@@ -45,6 +52,22 @@ struct ContentView: UIViewRepresentable {
                      type: WKMediaCaptureType,
                      decisionHandler: @escaping (WKPermissionDecision) -> Void) {
             decisionHandler(.grant)
+        }
+
+        // halaman mengirim gambar jadi (base64) untuk disimpan ke galeri
+        func userContentController(_ userContentController: WKUserContentController,
+                                   didReceive message: WKScriptMessage) {
+            guard message.name == "savePhoto",
+                  let base64 = message.body as? String,
+                  let data = Data(base64Encoded: base64),
+                  let image = UIImage(data: data) else { return }
+
+            PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+                guard status == .authorized || status == .limited else { return }
+                PHPhotoLibrary.shared().performChanges({
+                    PHAssetChangeRequest.creationRequestForAsset(from: image)
+                })
+            }
         }
     }
 }

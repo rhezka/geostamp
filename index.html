@@ -1177,6 +1177,17 @@
   $("save").addEventListener("click", async () => {
     const img = $("outimg");
     if (!img.dataset.ready || !outURL) return;
+    // di dalam aplikasi iOS: kirim ke penyimpanan galeri lewat jembatan bawaan
+    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.savePhoto){
+      try {
+        const b64 = img.src.split(",")[1];
+        window.webkit.messageHandlers.savePhoto.postMessage(b64);
+        const info = $("exifinfo");
+        info.style.display = "block";
+        info.textContent = "Saved to Photos";
+        return;
+      } catch (e) {}
+    }
     // iOS: menu Bagikan punya pilihan "Simpan Gambar" yang langsung masuk ke Foto
     if (lastFile && navigator.canShare && navigator.canShare({ files:[lastFile] })) {
       try { await navigator.share({ files:[lastFile] }); return; } catch (e) { /* dibatalkan */ }
