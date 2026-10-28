@@ -115,7 +115,7 @@
     <div id="hasil" class="hasil"></div>
   </div>
   <div id="map"></div>
-  <div id="coord" class="coord" style="margin-top:12px">Tap the map to set a point</div>
+  <div id="coord" class="coord" style="margin-top:12px;display:none"></div>
   <div id="addr" class="addr"></div>
   <button class="picker" id="btnPlaces" style="margin-top:12px">
     <span class="k">Saved Places</span><span class="v" id="valPlaces">None yet</span>
@@ -148,7 +148,7 @@
   <div id="err" class="err"></div>
 </div>
 
-<div class="card">
+<div class="card" id="outcard" style="display:none">
   <img id="outimg" alt="">
   <button id="save" style="display:none">Save to Photos</button>
   <div class="hint" id="exifinfo" style="display:none"></div>
@@ -382,6 +382,7 @@
       marker = L.marker([la,lo], { icon, draggable:true }).addTo(map);
       marker.on("dragend", e => { const p = e.target.getLatLng(); setPoint(p.lat, p.lng); });
     }
+    $("coord").style.display = "block";
     $("coord").textContent = "Lat " + fmt(la) + ", Long " + fmt(lo);
     $("addr").textContent = "looking up address…";
     reverse(la, lo);
@@ -518,13 +519,14 @@
     $("tgl").value = `${t.getFullYear()}-${p(t.getMonth()+1)}-${p(t.getDate())}`;
     $("jam").value = `${p(t.getHours())}:${p(t.getMinutes())}`;
     if (!navigator.geolocation) return;
+    $("coord").style.display = "block";
     $("coord").textContent = "getting GPS…";
     navigator.geolocation.getCurrentPosition(
       pos => {
         setPoint(pos.coords.latitude, pos.coords.longitude);
         map.setView([pos.coords.latitude, pos.coords.longitude], 17);
       },
-      () => { $("coord").textContent = "Tap the map to set a point"; },
+      () => { $("coord").style.display = "none"; $("coord").textContent = ""; },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   }
@@ -717,8 +719,10 @@
     // titik ikut dibersihkan
     lat = null; lon = null; alamat = ""; judul = "";
     if (marker){ map.removeLayer(marker); marker = null; }
-    $("coord").textContent = "Tap the map to set a point";
+    $("coord").style.display = "none";
+    $("coord").textContent = "";
     $("addr").textContent = "";
+    $("outcard").style.display = "none";
   }
   $("clear").addEventListener("click", clearAll);
 
