@@ -685,11 +685,26 @@
       inner.appendChild(row);
     });
 
+    const aksi = document.createElement("div");
+    aksi.className = "rowline";
+
+    const clear = document.createElement("button");
+    clear.className = "ghost";
+    clear.textContent = "Clear";
+    clear.onclick = () => {
+      setPlaces(getPlaces().filter(p => p.fav));      // hanya yang bukan favorit yang dibuang
+      updatePlacesLabel();
+      box.remove();
+      bukaPlaces();
+    };
+
     const cancel = document.createElement("button");
     cancel.className = "ghost";
     cancel.textContent = "Close";
     cancel.onclick = () => box.remove();
-    inner.appendChild(cancel);
+
+    aksi.append(clear, cancel);
+    inner.appendChild(aksi);
 
     box.appendChild(inner);
     box.addEventListener("click", e => { if (e.target === box) box.remove(); });

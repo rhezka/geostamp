@@ -137,6 +137,10 @@ parser strips the words and reads the pair.
 so copying no longer depends on tapping the whole box. The text is rebuilt from the stored
 point, which keeps the format identical to what the stamp prints.
 
+**28-10-2026, clearing saved places.** The list footer now has Clear and Close on one row.
+Clear drops every entry that is not starred, so a favourite can only be removed by
+unstarring it first — a deliberate guard against wiping a place that matters by accident.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.
