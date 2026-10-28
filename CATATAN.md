@@ -82,6 +82,16 @@ perubahan logika. Foto tetap diproses di browser, tidak pernah diunggah.
   zoom 19, 18, dan 17. Jadi titik yang pernah dibuka masih punya peta saat offline.
   Titik baru yang belum pernah dibuka tetap tidak bisa dirender tanpa internet.
 
+### 28-10-2026 — header berikon, pilihan gaya peta berupa menu
+
+- Header diberi jarak aman dari status bar (`env(safe-area-inset-top)`), ditambah ikon
+  aplikasi dan judul di tengah.
+- Kolom bawaan "Choose File / no file selected" hilang: semua `input[type=file]`
+  disembunyikan, termasuk input kamera.
+- Pilihan Satellite dan Map left diganti dua baris menu: **Map Style** dan
+  **Map Position**, dengan nilai aktif terlihat di kanan. Mengetuk membuka lembar
+  pilihan dari bawah, sama seperti Add Photo.
+
 ### Rollback
 
 Repo masih baru dan mandiri. Untuk kembali ke keadaan sebelum pemindahan, berkas asli
