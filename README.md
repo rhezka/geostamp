@@ -1,6 +1,10 @@
-# geotag-editor
+# PinStamp
+
+Stempel foto: peta kecil, alamat, koordinat, dan waktu, dengan EXIF yang ikut ditulis.
 
 Alamat online: https://rhezka.github.io/geotag-editor/
+
+Dipasang di iPhone: buka alamat itu di Safari, lalu Bagikan > Tambahkan ke Layar Utama.
 
 Alat untuk mengubah foto polos menjadi foto berstempel: peta kecil, alamat, koordinat,
 dan waktu — sekaligus menulis koordinat dan waktu itu ke dalam EXIF berkas hasil.

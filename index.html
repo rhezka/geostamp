@@ -3,7 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<title>Photo Stamp</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-32.png">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PinStamp">
+<meta name="description" content="Stamp photos with map, address, coordinates and time.">
+<title>PinStamp</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   :root { --bg:#0f1115; --card:#161b23; --line:#28303d; --txt:#e8eaee; --dim:#8b95a7; --blue:#2f6ff2; }
@@ -51,12 +59,16 @@
 </head>
 <body>
 <header>
-  <h1>Photo Stamp</h1>
+  <h1>PinStamp</h1>
 </header>
 
 <div class="card">
-  <label class="filebtn" for="file">Choose Photo</label>
+  <div class="row">
+    <label class="filebtn" for="file">Gallery</label>
+    <label class="filebtn" for="cam">Camera</label>
+  </div>
   <input id="file" type="file" accept="image/*,.heic,.heif">
+  <input id="cam" type="file" accept="image/*" capture="environment">
   <img id="preview" alt="">
 </div>
 
@@ -391,10 +403,8 @@
   $("skala").addEventListener("input", e => { $("skalaval").textContent = e.target.value + "%"; });
 
   // ---------- pilih foto
-  $("file").addEventListener("change", e => {
-    const f = e.target.files && e.target.files[0];
+  function loadPhoto(f, dariKamera){
     if (!f) return;
-    photo = null;
     if (photoURL) URL.revokeObjectURL(photoURL);
     photoURL = URL.createObjectURL(f);
     const im = new Image();
@@ -403,10 +413,33 @@
       $("preview").src = photoURL;
       $("preview").style.display = "block";
       $("err").textContent = "";
+      if (dariKamera) useNow();
     };
     im.onerror = () => { $("err").textContent = "Cannot read this photo. Try JPG or PNG."; };
     im.src = photoURL;
-  });
+  }
+
+  // kamera: waktu dan titik diambil saat itu juga
+  function useNow(){
+    const now = new Date();
+    const t = new Date(now.getTime() + (7*60 + now.getTimezoneOffset())*60000);
+    const p = n => String(n).padStart(2,"0");
+    $("tgl").value = `${t.getFullYear()}-${p(t.getMonth()+1)}-${p(t.getDate())}`;
+    $("jam").value = `${p(t.getHours())}:${p(t.getMinutes())}`;
+    if (!navigator.geolocation) return;
+    $("coord").textContent = "getting GPS…";
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setPoint(pos.coords.latitude, pos.coords.longitude);
+        map.setView([pos.coords.latitude, pos.coords.longitude], 17);
+      },
+      () => { $("coord").textContent = "Tap the map to set a point"; },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  }
+
+  $("file").addEventListener("change", e => loadPhoto(e.target.files && e.target.files[0], false));
+  $("cam").addEventListener("change", e => loadPhoto(e.target.files && e.target.files[0], true));
 
   // ---------- gambar
   const FONT = 'Arial, "Helvetica Neue", Helvetica, sans-serif';
@@ -716,6 +749,11 @@
     a.remove();
   });
 })();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
 </script>
 </body>
 </html>

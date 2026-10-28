@@ -41,6 +41,17 @@ ke repo ini atas permintaan pemilik.
 Seluruh teks halaman diganti ke bahasa Inggris dan label bernomor dihapus. Tidak ada
 perubahan logika. Foto tetap diproses di browser, tidak pernah diunggah.
 
+### 28-10-2026 — merek, ikon, kamera, PWA
+
+- Nama merek: **PinStamp**. Ikon dibuat sendiri (pin + baris keterangan) dalam ukuran
+  1024, 512, 192, 180, dan 32.
+- Tambah tombol **Camera** di samping **Gallery**. Foto dari kamera otomatis memakai waktu
+  saat itu dan meminta izin GPS untuk menaruh titik. Foto dari galeri tetap manual.
+- Tambah `manifest.json` dan `sw.js` supaya bisa dipasang ke layar utama (PWA) dan
+  tetap terbuka saat offline. Hanya berkas sendiri yang di-cache; peta dan pencarian
+  alamat selalu lewat jaringan.
+- Catatan: ini PWA, bukan UWP. Aplikasi Windows (UWP/MSIX) jalur terpisah.
+
 ### Rollback
 
 Repo masih baru dan mandiri. Untuk kembali ke keadaan sebelum pemindahan, berkas asli
