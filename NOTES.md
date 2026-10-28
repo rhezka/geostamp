@@ -93,6 +93,10 @@ reaches the phone on the next open instead of being served from cache indefinite
 alone explained most of the "still broken" reports. And a satellite map is only accepted
 when every tile is real, otherwise the app steps down a zoom or switches to the street map.
 
+**28-10-2026, search clear.** Added a round × button inside the search field. It only
+appears while there is text, empties the box and closes the result list, and leaves the
+cursor ready for a new query.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.
