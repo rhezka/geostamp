@@ -109,6 +109,7 @@
   <button id="addbtn">Add Photo</button>
   <input id="file" type="file" accept="image/*,.heic,.heif">
   <input id="cam" type="file" accept="image/*" capture="environment">
+  <div class="hint" id="loading" style="display:none;text-align:center;margin-top:12px">Loading photo…</div>
   <img id="preview" alt="">
   <div class="rowline" id="afterpick" style="display:none">
     <button id="clear" class="ghost">Clear</button>
@@ -545,17 +546,28 @@
     if (!f) return;
     if (photoURL) URL.revokeObjectURL(photoURL);
     photoURL = URL.createObjectURL(f);
+
+    $("loading").style.display = "block";
+    $("preview").style.display = "none";
+    $("go").disabled = true;
+    $("err").textContent = "";
+
     const im = new Image();
     im.onload = () => {
       photo = im;
       $("preview").src = photoURL;
       $("preview").style.display = "block";
       $("afterpick").style.display = "flex";
-      $("err").textContent = "";
+      $("loading").style.display = "none";
+      $("go").disabled = false;
       if (dariKamera) useNow();
       else bacaExif(f);
     };
-    im.onerror = () => { $("err").textContent = "Cannot read this photo. Try JPG or PNG."; };
+    im.onerror = () => {
+      $("loading").style.display = "none";
+      $("go").disabled = false;
+      $("err").textContent = "Cannot read this photo. Try JPG or PNG.";
+    };
     im.src = photoURL;
   }
 
