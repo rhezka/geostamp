@@ -6,3 +6,9 @@ app/GeoStamp.xcodeproj/
 app/build/
 Payload/
 *.ipa
+android/app/src/main/assets/
+android/build/
+android/app/build/
+android/.gradle/
+release.jks
+GeoStamp.apk

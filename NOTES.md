@@ -173,6 +173,13 @@ converts the finished JPEG to base64 and sends that. The home screen icon stayed
 because the source PNG had transparent corners, which iOS renders as blank; the app icon
 is flattened onto a solid dark background.
 
+**29-10-2026, Android build.** Added an Android app with the same idea as the iOS one: a
+WebView that serves the bundled page through WebViewAssetLoader, so it runs from a real
+https origin instead of file:// and avoids the usual local-file restrictions. Two native
+bridges exist, one per platform, for saving the finished image straight into the gallery.
+The APK is signed with a throwaway key generated during the build, which is enough for
+sideloading but means every rebuild is a fresh identity.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.

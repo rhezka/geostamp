@@ -1197,6 +1197,17 @@
   $("save").addEventListener("click", async () => {
     const img = $("outimg");
     if (!img.dataset.ready || !outURL) return;
+    // di dalam aplikasi Android: simpan lewat jembatan bawaan
+    if (window.AndroidBridge && window.AndroidBridge.saveImage){
+      try {
+        if (!lastB64) throw new Error("no image");
+        window.AndroidBridge.saveImage(lastB64);
+        const info = $("exifinfo");
+        info.style.display = "block";
+        info.textContent = "Saved to gallery";
+        return;
+      } catch (e) {}
+    }
     // di dalam aplikasi iOS: kirim ke penyimpanan galeri lewat jembatan bawaan
     if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.savePhoto){
       try {
