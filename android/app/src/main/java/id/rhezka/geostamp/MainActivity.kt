@@ -10,7 +10,6 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Base64
-import android.view.ViewGroup
 import android.webkit.GeolocationPermissions
 import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
@@ -41,6 +40,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
         val uri = cameraUri
         fileCallback?.onReceiveValue(if (ok && uri != null) arrayOf(uri) else null)
         fileCallback = null
+        cameraUri = null
     }
 
     private var cameraUri: Uri? = null
@@ -87,9 +87,10 @@ class MainActivity : androidx.activity.ComponentActivity() {
                 fileCallback?.onReceiveValue(null)
                 fileCallback = callback
                 if (params.isCaptureEnabled) {
-                    cameraUri = newImageUri()
-                    if (cameraUri != null) {
-                        takePhoto.launch(cameraUri)
+                    val target = newImageUri()
+                    cameraUri = target
+                    if (target != null) {
+                        takePhoto.launch(target)
                         return true
                     }
                 }
@@ -99,7 +100,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
         }
 
         web.addJavascriptInterface(Bridge(), "AndroidBridge")
-        setContentView(web, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        setContentView(web)
 
         web.loadUrl("https://appassets.androidplatform.net/assets/www/index.html")
 
@@ -120,13 +121,6 @@ class MainActivity : androidx.activity.ComponentActivity() {
         return contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-    }
 
     // jembatan: halaman mengirim gambar jadi (base64) untuk disimpan ke galeri
     inner class Bridge {
