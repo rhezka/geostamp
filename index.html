@@ -1070,9 +1070,7 @@
     roundRect(ctx, px0, py0, px1 - px0, L.panelH, Math.round(28*k));
     ctx.fill();
 
-    $("go").textContent = "Working… map";
     const maps = await bestMap(mapS, gaya);
-    $("go").textContent = "Working… drawing";
     const mimg = maps.canvas;
     ctx.save();
     roundRect(ctx, px0 + pad, py0 + pad, mapS, mapS, Math.round(14*k));
