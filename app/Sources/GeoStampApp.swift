@@ -21,8 +21,8 @@ struct ContentView: UIViewRepresentable {
         web.backgroundColor = UIColor(red: 0.059, green: 0.067, blue: 0.082, alpha: 1)
         web.scrollView.bounces = false
         web.allowsBackForwardNavigationGestures = false
-        web.navigationDelegate = Context.coordinator
-        web.uiDelegate = Context.coordinator
+        web.navigationDelegate = context.coordinator
+        web.uiDelegate = context.coordinator
 
         // halaman dibundel di dalam aplikasi supaya tetap jalan tanpa internet
         guard let webDir = Bundle.main.url(forResource: "Web", withExtension: nil) else {
