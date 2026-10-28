@@ -72,6 +72,16 @@ perubahan logika. Foto tetap diproses di browser, tidak pernah diunggah.
   karena tidak ada API untuk menghapus; bisa dibersihkan dari halaman Repos di Manager.
 - Situs tetap di https://rhezka.github.io/geostamp/ .
 
+### 28-10-2026 — slider 50-150, tile disimpan untuk offline
+
+- Slider ukuran sekarang 50 sampai 150 persen, dengan 100 persen tepat di tengah.
+- Service worker menyimpan tile peta. Cache dipisah dua: `geostamp-tiles-cors` untuk
+  permintaan ber-CORS (dipakai kanvas saat membuat stempel) dan `geostamp-tiles-opaque`
+  untuk peta Leaflet. Kalau dicampur, kanvas jadi tercemar dan penyimpanan gambar gagal.
+- Saat titik dipasang dan perangkat online, 5x5 tile di sekitar titik disimpan untuk
+  zoom 19, 18, dan 17. Jadi titik yang pernah dibuka masih punya peta saat offline.
+  Titik baru yang belum pernah dibuka tetap tidak bisa dirender tanpa internet.
+
 ### Rollback
 
 Repo masih baru dan mandiri. Untuk kembali ke keadaan sebelum pemindahan, berkas asli

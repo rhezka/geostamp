@@ -106,7 +106,7 @@
     </select>
   </div>
   <div style="margin-top:14px">
-    <input id="skala" type="range" min="70" max="150" step="5" value="100" style="width:100%">
+    <input id="skala" type="range" min="50" max="150" step="5" value="100" style="width:100%">
     <div class="hint" style="text-align:center">Size <b id="skalaval">100%</b></div>
   </div>
   <button id="go">Create Stamp</button>
@@ -349,6 +349,32 @@
     $("coord").textContent = "Lat " + fmt(la) + ", Long " + fmt(lo);
     $("addr").textContent = "looking up address…";
     reverse(la, lo);
+    if (navigator.onLine !== false) cacheTiles(la, lo).catch(() => {});
+  }
+
+  // simpan tile di sekitar titik (5x5 pada zoom 19, 18, dan 17) agar stempel
+  // masih punya peta saat offline di titik yang pernah dibuka
+  async function cacheTiles(la, lo){
+    if (!("caches" in window)) return;
+    const gaya = $("gaya").value;
+    const urls = [];
+    for (const z of [19, 18, 17]){
+      if (z > TILES[gaya].max) continue;
+      const fx = lon2tile(lo, z), fy = lat2tile(la, z);
+      const cx = Math.floor(fx), cy = Math.floor(fy);
+      for (let dx = -2; dx <= 2; dx++)
+        for (let dy = -2; dy <= 2; dy++)
+          urls.push(TILES[gaya].url(z, cx + dx, cy + dy));
+    }
+    for (const u of urls){
+      const c = await caches.open("geostamp-tiles-cors");
+      const hit = await c.match(u);
+      if (hit) continue;
+      try {
+        const r = await fetch(u, { mode: "cors" });   // CORS agar kanvas tidak tercemar
+        if (r && r.ok) await c.put(u, r.clone());
+      } catch (e) { /* abaikan */ }
+    }
   }
 
   function reverse(la, lo){
