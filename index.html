@@ -1088,12 +1088,13 @@
     const maps = await bestMap(mapS, gaya);
     const mimg = maps.canvas;
     ctx.save();
-    roundRect(ctx, px0 + pad, py0 + pad, mapS, mapS, Math.round(14*k));
+    const mapX = posisi === "br" ? px0 + pad + colW + gap : px0 + pad;
+    roundRect(ctx, mapX, py0 + pad, mapS, mapS, Math.round(14*k));
     ctx.clip();
-    ctx.drawImage(mimg, px0 + pad, py0 + pad);
+    ctx.drawImage(mimg, mapX, py0 + pad);
     ctx.restore();
 
-    const tx = px0 + pad + mapS + gap;
+    const tx = posisi === "br" ? px0 + pad : px0 + pad + mapS + gap;
     let ty = py0 + pad + Math.max(0, (mapS - L.textH) / 2);
 
     ctx.textBaseline = "top";

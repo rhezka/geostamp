@@ -141,6 +141,10 @@ point, which keeps the format identical to what the stamp prints.
 Clear drops every entry that is not starred, so a favourite can only be removed by
 unstarring it first — a deliberate guard against wiping a place that matters by accident.
 
+**28-10-2026, map position ignored.** Choosing Right did nothing visible because the map
+square was always drawn at the left edge of the panel, even though the panel itself spans
+the full width. The map and the text column now swap places when Right is selected.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.
