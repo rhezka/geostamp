@@ -113,6 +113,12 @@ justru bisa mengganggu. Kalau nanti ingin muncul di gambar, bisa ditambah opsi t
 - Kotak Map Style dan Map Position diberi latar lebih terang dan tanda ⌄ di kanan,
   supaya jelas bisa diketuk.
 
+### 28-10-2026 — kolom isian disamakan
+
+Kotak pencarian, tanggal, dan jam memakai gaya yang sama dengan kotak Map Style:
+latar `#222c3b`, garis tepi `#37455c`, dan `color-scheme: dark` agar pemilih tanggal
+bawaan iOS ikut gelap.
+
 ### Rollback
 
 Repo masih baru dan mandiri. Untuk kembali ke keadaan sebelum pemindahan, berkas asli
