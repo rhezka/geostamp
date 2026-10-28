@@ -70,6 +70,14 @@ street map. A map is only accepted when at least eighty-five percent of its tile
 The repository description on GitHub was still Indonesian; changed to English, homepage
 and topics added.
 
+**28-10-2026, water mistaken for holes.** A photo from Jungkat, Mempawah, came back with
+grey blocks in the map box. The cause was the tile filter itself: a sea tile is almost
+perfectly uniform, so it looked like a placeholder. Measuring both settled it — a missing
+Esri tile averages 205 brightness with a spread of 3.6, while water averages 33 with a
+spread of 0. The filter now only discards tiles that are both very flat and very light.
+Street maps keep a higher score threshold than satellite, since a patch of open sea is a
+legitimate, featureless image.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.

@@ -724,8 +724,10 @@
     });
   }
 
-  // tile kosong / placeholder punya warna nyaris rata; tile asli punya variasi
-  function tileQuality(img){
+  // Bedakan tile kosong dari tile berisi. Placeholder Esri berwarna abu terang dan
+  // nyaris rata (rerata ~205, simpangan ~4). Laut juga rata tapi gelap (rerata ~33),
+  // jadi tidak boleh ikut dibuang.
+  function tileStats(img){
     try {
       const S = 40, c = document.createElement("canvas");
       c.width = S; c.height = S;
@@ -738,8 +740,8 @@
         sum += v; sum2 += v*v; n++;
       }
       const mean = sum / n;
-      return Math.sqrt(Math.max(0, sum2/n - mean*mean));
-    } catch (e) { return 99; }
+      return { mean, sd: Math.sqrt(Math.max(0, sum2/n - mean*mean)) };
+    } catch (e) { return { mean: 0, sd: 99 }; }
   }
 
   // gambar satu potongan peta; hasil menyertakan skor kualitas
@@ -769,7 +771,8 @@
         const j = jobs.shift();
         const img = await loadTile(j.url);
         if (!img) continue;
-        if (tileQuality(img) < 8) continue;          // tile kosong / placeholder, lewati
+        const st = tileStats(img);
+        if (st.sd < 6 && st.mean > 150) continue;    // placeholder abu terang, lewati
         octx.drawImage(img, (j.tx - tx0) * 256, (j.ty - ty0) * 256);
         valid++;
       }
@@ -835,7 +838,8 @@
     let hasil = null;
     for (const [z, g] of coba){
       const r = await makeMap(size, z, g);
-      const layak = r.valid / r.total >= 0.85 && r.skor >= 12;
+      const batas = g === "peta" ? 8 : 4;          // peta laut boleh nyaris rata
+      const layak = r.valid / r.total >= 0.85 && r.skor >= batas;
       if (!hasil || r.skor > hasil.skor) hasil = r;
       if (layak) return r;
     }
