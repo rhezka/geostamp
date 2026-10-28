@@ -165,6 +165,14 @@ the owner's request. Notes for the future: the reference app gives each template
 typeface rather than the system font, so a template is a font and layout pair, not just a
 different arrangement.
 
+**29-10-2026, first install feedback.** Three findings from the phone. The IPA placed in the
+workspace would not open, but the one from the release link installed fine, so the release
+is the path to use. Saving reported success while nothing reached Photos: the page sent the
+blob URL instead of image data, so the native side received an unusable string. It now
+converts the finished JPEG to base64 and sends that. The home screen icon stayed white
+because the source PNG had transparent corners, which iOS renders as blank; the app icon
+is flattened onto a solid dark background.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.
