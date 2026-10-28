@@ -110,6 +110,9 @@
   <div id="map"></div>
   <div id="coord" class="coord" style="margin-top:12px">Tap the map to set a point</div>
   <div id="addr" class="addr"></div>
+  <button class="picker" id="btnPlaces" style="margin-top:12px">
+    <span class="k">Saved Places</span><span class="v" id="valPlaces">None yet</span>
+  </button>
 </div>
 
 <div class="card">
@@ -428,6 +431,7 @@
         kota ? null : region, state, country ].forEach(push);
       alamat = parts.join(", ") || j.display_name || "";
       $("addr").textContent = alamat || "address not found";
+      addRecent(la, lo, namaSingkat());
     }).catch(() => { alamat = ""; judul = ""; $("addr").textContent = "address unavailable"; });
   }
 
@@ -508,6 +512,99 @@
 
   $("file").addEventListener("change", e => loadPhoto(e.target.files && e.target.files[0], false));
   $("cam").addEventListener("change", e => loadPhoto(e.target.files && e.target.files[0], true));
+
+  // ---------- riwayat dan favorit lokasi (disimpan di HP)
+  const STORE = "geostamp.places";
+  const getPlaces = () => { try { return JSON.parse(localStorage.getItem(STORE) || "[]"); } catch (e) { return []; } };
+  const setPlaces = (l) => { try { localStorage.setItem(STORE, JSON.stringify(l)); } catch (e) {} };
+
+  function namaSingkat(){
+    const a = alamat.split(",")[0].trim();
+    return a || (fmt(lat) + ", " + fmt(lon));
+  }
+
+  function addRecent(la, lo, nama){
+    const list = getPlaces();
+    const dekat = list.find(p => Math.abs(p.lat - la) < 0.0004 && Math.abs(p.lon - lo) < 0.0004);
+    if (dekat) { dekat.ts = Date.now(); if (nama) dekat.name = nama; }
+    else list.push({ lat: la, lon: lo, name: nama || "", fav: false, ts: Date.now() });
+    const fav = list.filter(p => p.fav);
+    const lain = list.filter(p => !p.fav).sort((a,b) => b.ts - a.ts).slice(0, 15);
+    setPlaces([...fav, ...lain]);
+    updatePlacesLabel();
+  }
+
+  function updatePlacesLabel(){
+    const n = getPlaces().length;
+    $("valPlaces").textContent = n ? n + " saved" : "None yet";
+  }
+
+  function bukaPlaces(){
+    const list = getPlaces().slice().sort((a,b) => (b.fav?1:0) - (a.fav?1:0) || b.ts - a.ts);
+    const box = document.createElement("div");
+    box.className = "sheet show";
+    const inner = document.createElement("div");
+    inner.className = "inner";
+    inner.style.maxHeight = "70vh";
+    inner.style.overflowY = "auto";
+
+    const head = document.createElement("div");
+    head.className = "hint";
+    head.style.cssText = "text-align:center;margin:2px 0 10px";
+    head.textContent = list.length ? "Tap to use, star to keep" : "No saved places yet";
+    inner.appendChild(head);
+
+    list.forEach((it) => {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:center;gap:8px;padding:10px 2px;border-bottom:1px solid #232a36";
+
+      const main = document.createElement("div");
+      main.style.cssText = "flex:1;min-width:0;text-align:left";
+      const t1 = document.createElement("div");
+      t1.textContent = it.name || "Pinned point";
+      t1.style.cssText = "font-size:14px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
+      const t2 = document.createElement("div");
+      t2.textContent = fmt(it.lat) + ", " + fmt(it.lon);
+      t2.style.cssText = "font-size:11.5px;color:var(--dim);font-family:ui-monospace,Menlo,monospace";
+      main.append(t1, t2);
+      main.onclick = () => {
+        box.remove();
+        map.flyTo([it.lat, it.lon], 17, { duration:.6 });
+        setTimeout(() => setPoint(it.lat, it.lon), 650);
+      };
+
+      const star = document.createElement("button");
+      star.textContent = it.fav ? "★" : "☆";
+      star.style.cssText = "width:40px;margin:0;padding:8px 0;background:none;color:" +
+        (it.fav ? "#f5c542" : "#8b95a7") + ";font-size:20px";
+      star.onclick = (e) => {
+        e.stopPropagation();
+        const all = getPlaces();
+        const t = all.find(p => p.ts === it.ts && p.lat === it.lat);
+        if (t) t.fav = !t.fav;
+        setPlaces(all);
+        updatePlacesLabel();
+        box.remove();
+        bukaPlaces();
+      };
+
+      row.append(main, star);
+      inner.appendChild(row);
+    });
+
+    const cancel = document.createElement("button");
+    cancel.className = "ghost";
+    cancel.textContent = "Close";
+    cancel.onclick = () => box.remove();
+    inner.appendChild(cancel);
+
+    box.appendChild(inner);
+    box.addEventListener("click", e => { if (e.target === box) box.remove(); });
+    document.body.appendChild(box);
+  }
+
+  $("btnPlaces").addEventListener("click", bukaPlaces);
+  updatePlacesLabel();
 
   // pilihan gaya dan posisi peta, memakai lembar bawah yang sama
   function pilihOpsi(judul, opsi, nilaiSekarang, saatPilih){

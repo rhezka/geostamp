@@ -119,6 +119,14 @@ Kotak pencarian, tanggal, dan jam memakai gaya yang sama dengan kotak Map Style:
 latar `#222c3b`, garis tepi `#37455c`, dan `color-scheme: dark` agar pemilih tanggal
 bawaan iOS ikut gelap.
 
+### 28-10-2026 — riwayat dan favorit lokasi
+
+- Titik yang dipakai otomatis disimpan di `localStorage` (`geostamp.places`), maksimal
+  15 titik terakhir ditambah titik favorit tanpa batas.
+- Baris **Saved Places** di kartu peta membuka daftar; ketuk untuk memakai lagi,
+  ketuk bintang untuk menjadikannya favorit (selalu di atas).
+- Tampilan awal peta tetap Pontianak (tetap di kode), tidak diubah.
+
 ### Rollback
 
 Repo masih baru dan mandiri. Untuk kembali ke keadaan sebelum pemindahan, berkas asli
