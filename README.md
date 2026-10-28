@@ -1,5 +1,7 @@
 # geotag-editor
 
+Alamat online: https://rhezka.github.io/geotag-editor/
+
 Alat untuk mengubah foto polos menjadi foto berstempel: peta kecil, alamat, koordinat,
 dan waktu — sekaligus menulis koordinat dan waktu itu ke dalam EXIF berkas hasil.
 

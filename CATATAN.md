@@ -31,6 +31,11 @@ ke repo ini atas permintaan pemilik.
 5. Tombol simpan memakai unduhan biasa sehingga masuk ke Files. Diganti `navigator.share`
    agar muncul pilihan Simpan Gambar.
 
+### Publikasi
+
+- 28-10-2026: repo dijadikan publik dan GitHub Pages diaktifkan dari branch `main`, folder akar.
+  Alamat: https://rhezka.github.io/geotag-editor/ (status build: built, HTTP 200).
+
 ### Rollback
 
 Repo masih baru dan mandiri. Untuk kembali ke keadaan sebelum pemindahan, berkas asli
