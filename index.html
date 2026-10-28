@@ -53,6 +53,8 @@
   .coord { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:15px; background:#1a1f28;
            border:1px solid var(--line); border-radius:11px; padding:10px 12px; user-select:all; -webkit-user-select:all; }
   .addr { font-size:13px; color:var(--dim); line-height:1.45; margin-top:8px; min-height:18px; }
+  #coord { cursor:pointer; }
+  #coord:active { background:#27313f; }
   .row { display:flex; gap:10px; margin-top:12px; }
   .row > * { flex:1; min-width:0; }
   input[type=date], input[type=time], select {
@@ -119,6 +121,7 @@
   </div>
   <div id="map"></div>
   <div id="coord" class="coord" style="margin-top:12px;display:none"></div>
+  <div class="hint" id="copied" style="display:none">Copied</div>
   <div id="addr" class="addr"></div>
   <button class="picker" id="btnPlaces" style="margin-top:12px">
     <span class="k">Saved Places</span><span class="v" id="valPlaces">None yet</span>
@@ -643,7 +646,7 @@
       t1.textContent = it.name || "Pinned point";
       t1.style.cssText = "font-size:14px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
       const t2 = document.createElement("div");
-      t2.textContent = fmt(it.lat) + ", " + fmt(it.lon);
+      t2.textContent = "Lat " + fmt(it.lat) + ", Long " + fmt(it.lon);
       t2.style.cssText = "font-size:11.5px;color:var(--dim);font-family:ui-monospace,Menlo,monospace";
       main.append(t1, t2);
       main.onclick = () => {
@@ -681,6 +684,15 @@
     box.addEventListener("click", e => { if (e.target === box) box.remove(); });
     document.body.appendChild(box);
   }
+
+  $("coord").addEventListener("click", async () => {
+    const teks = $("coord").textContent;
+    if (!teks || lat === null) return;
+    try { await navigator.clipboard.writeText(teks); } catch (e) {}
+    const t = $("copied");
+    t.style.display = "block";
+    setTimeout(() => { t.style.display = "none"; }, 1200);
+  });
 
   $("btnPlaces").addEventListener("click", bukaPlaces);
   updatePlacesLabel();

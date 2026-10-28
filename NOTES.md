@@ -127,6 +127,12 @@ failure. Fixed, and two related hazards removed: tile loads now give up after se
 seconds instead of hanging forever, and the button reports which stage it is in while a
 large photo is processed.
 
+**28-10-2026, one coordinate format.** The app now speaks a single dialect everywhere:
+`Lat -0.347711, Long 109.440144`, six decimals, latitude first. That is what the stamp
+prints, what the saved-places list shows, and what tapping the coordinate box copies to
+the clipboard. Pasting that same line back into the search box resolves it, because the
+parser strips the words and reads the pair.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.
