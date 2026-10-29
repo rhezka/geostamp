@@ -47,25 +47,25 @@ class MainActivity : androidx.activity.ComponentActivity() {
     private fun prepareImage(source: Uri): Uri? {
         return try {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            contentResolver.openInputStream(source).use { BitmapFactory.decodeStream(it, null, bounds) }
+            contentResolver.openInputStream(source)?.use { BitmapFactory.decodeStream(it, null, bounds) }
 
             val longest = maxOf(bounds.outWidth, bounds.outHeight)
             var sample = 1
             while (longest / sample > 4096) sample *= 2
 
             val opts = BitmapFactory.Options().apply { inSampleSize = sample }
-            val bitmap = contentResolver.openInputStream(source).use {
+            val bitmap = contentResolver.openInputStream(source)?.use {
                 BitmapFactory.decodeStream(it, null, opts)
             } ?: return null
 
-            val rotation = contentResolver.openInputStream(source).use { input ->
+            val rotation = contentResolver.openInputStream(source)?.use { input ->
                 when (ExifInterface(input).getAttributeInt(ExifInterface.TAG_ORIENTATION, 1)) {
                     ExifInterface.ORIENTATION_ROTATE_90 -> 90f
                     ExifInterface.ORIENTATION_ROTATE_180 -> 180f
                     ExifInterface.ORIENTATION_ROTATE_270 -> 270f
                     else -> 0f
                 }
-            }
+            } ?: 0f
 
             val fixed = if (rotation != 0f) {
                 val m = Matrix().apply { postRotate(rotation) }
