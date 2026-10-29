@@ -596,6 +596,22 @@
     }
   }
 
+  // dipanggil dari aplikasi Android setelah foto diubah jadi JPEG (EXIF-nya hilang)
+  window.geostampApplyExif = (la, lo, millis) => {
+    if (typeof la === "number" && typeof lo === "number" &&
+        !(Math.abs(la) < 0.0001 && Math.abs(lo) < 0.0001)){
+      setPoint(la, lo);
+      map.setView([la, lo], 17);
+    }
+    if (typeof millis === "number" && isFinite(millis)){
+      const d = new Date(millis);
+      const w = new Date(d.getTime() + 7 * 3600 * 1000);
+      const p2 = n => String(n).padStart(2,"0");
+      $("tgl").value = `${w.getUTCFullYear()}-${p2(w.getUTCMonth()+1)}-${p2(w.getUTCDate())}`;
+      $("jam").value = `${p2(w.getUTCHours())}:${p2(w.getUTCMinutes())}`;
+    }
+  };
+
   // kamera: waktu dan titik diambil saat itu juga
   function useNow(){
     const now = new Date();

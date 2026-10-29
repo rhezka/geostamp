@@ -26,6 +26,9 @@ import android.widget.Toast
 import androidx.exifinterface.media.ExifInterface
 import androidx.webkit.WebViewAssetLoader
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 class MainActivity : androidx.activity.ComponentActivity() {
 
@@ -35,9 +38,57 @@ class MainActivity : androidx.activity.ComponentActivity() {
     private val pickImage = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        val prepared = uri?.let { prepareImage(it) }
+        var lat: Double? = null
+        var lon: Double? = null
+        var millis: Long? = null
+        val prepared = uri?.let {
+            readMeta(it).let { meta ->
+                lat = meta.first
+                lon = meta.second
+                millis = meta.third
+            }
+            prepareImage(it)
+        }
         fileCallback?.onReceiveValue(prepared?.let { arrayOf(it) })
         fileCallback = null
+        if (prepared != null) kirimMeta(lat, lon, millis)
+    }
+
+    /** Baca lokasi dan waktu dari foto asli sebelum diubah jadi JPEG. */
+    private fun readMeta(source: Uri): Triple<Double?, Double?, Long?> {
+        var lat: Double? = null
+        var lon: Double? = null
+        var millis: Long? = null
+        try {
+            contentResolver.openInputStream(source)?.use { input ->
+                val exif = ExifInterface(input)
+                exif.latLong?.let {
+                    lat = it[0]
+                    lon = it[1]
+                }
+                val raw = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL)
+                if (raw != null) {
+                    val offset = exif.getAttribute(ExifInterface.TAG_OFFSET_TIME_ORIGINAL)
+                    val fmt = SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US)
+                    fmt.timeZone = if (offset != null) TimeZone.getTimeZone("GMT$offset")
+                                   else TimeZone.getDefault()
+                    millis = fmt.parse(raw)?.time
+                }
+            }
+        } catch (e: Exception) {
+            // tanpa metadata bukan masalah
+        }
+        return Triple(lat, lon, millis)
+    }
+
+    private fun kirimMeta(lat: Double?, lon: Double?, millis: Long?) {
+        if (lat == null && millis == null) return
+        val la = lat?.toString() ?: "null"
+        val lo = lon?.toString() ?: "null"
+        val ms = millis?.toString() ?: "null"
+        web.post {
+            web.evaluateJavascript("window.geostampApplyExif($la, $lo, $ms)", null)
+        }
     }
 
     /**
