@@ -219,6 +219,12 @@ Left alone on purpose: the iOS save path (proven working on the phone), the WIB-
 clock (correct for the owner), and the hand-rolled EXIF writer (verified byte-exact
 earlier).
 
+**29-10-2026, web cannot read Samsung locations.** A browser has no access to the Gallery
+database or the Google account, so a Samsung photo whose file carries no GPS will never
+autofill on the web — that is a platform limit, not a bug. The Android app covers it
+through the MediaStore fallback. For the web, a "Use current location" button now appears
+whenever the photo has no location, filling the point from the phone's GPS in one tap.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.

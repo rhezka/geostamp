@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GeoStamp">
-<meta name="app-version" content="v42">
+<meta name="app-version" content="v43">
 <meta name="description" content="Stamp photos with map, address, coordinates and time.">
 <title>GeoStamp</title>
 <link rel="stylesheet" href="leaflet/leaflet.css">
@@ -130,6 +130,7 @@
   </div>
   <div class="hint" id="copied" style="display:none">Copied</div>
   <div id="addr" class="addr"></div>
+  <button id="useloc" class="ghost" style="display:none;margin-top:8px">Use current location</button>
   <button class="picker" id="btnPlaces" style="margin-top:12px">
     <span class="k">Saved Places</span><span class="v" id="valPlaces">None yet</span>
   </button>
@@ -392,6 +393,7 @@
 
   function setPoint(la, lo){
     lat = la; lon = lo;
+    $("useloc").style.display = "none";
     if (marker) marker.setLatLng([la,lo]);
     else {
       marker = L.marker([la,lo], { icon, draggable:true }).addTo(map);
@@ -645,7 +647,8 @@
       setPoint(o.latitude, o.longitude);
       map.setView([o.latitude, o.longitude], 17);
     } else {
-      $("addr").textContent = "No location in this photo — set the point manually";
+      $("addr").textContent = "No location in this photo";
+      $("useloc").style.display = "block";
     }
 
     const t = o.DateTimeOriginal || o.CreateDate || o.ModifyDate;
@@ -666,7 +669,8 @@
       setPoint(la, lo);
       map.setView([la, lo], 17);
     } else {
-      $("addr").textContent = "No location in this photo — set the point manually";
+      $("addr").textContent = "No location in this photo";
+      $("useloc").style.display = "block";
     }
     if (typeof millis === "number" && isFinite(millis)){
       const d = new Date(millis);
@@ -814,6 +818,19 @@
     setTimeout(() => { t.style.display = "none"; }, 1200);
   });
 
+  $("useloc").addEventListener("click", () => {
+    if (!navigator.geolocation){
+      $("addr").textContent = "Location is not available on this device";
+      return;
+    }
+    $("addr").textContent = "Getting current location…";
+    navigator.geolocation.getCurrentPosition(
+      pos => { setPoint(pos.coords.latitude, pos.coords.longitude); },
+      () => { $("addr").textContent = "Could not get current location"; },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+    );
+  });
+
   $("btnPlaces").addEventListener("click", bukaPlaces);
   updatePlacesLabel();
 
@@ -912,6 +929,7 @@
     $("coord").style.display = "none";
     $("coordtext").textContent = "";
     $("addr").textContent = "";
+    $("useloc").style.display = "none";
     $("outcard").style.display = "none";
   }
   $("clear").addEventListener("click", clearAll);
