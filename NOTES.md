@@ -180,6 +180,13 @@ bridges exist, one per platform, for saving the finished image straight into the
 The APK is signed with a throwaway key generated during the build, which is enough for
 sideloading but means every rebuild is a fresh identity.
 
+**29-10-2026, HEIC without the wait.** Android browsers cannot decode HEIC, which is why
+the same page worked on an iPhone and failed on a Galaxy S21. A HEIC converter is now part
+of the page and loads only when needed. The first version hung with the spinner running, so
+photo loading was rewritten: HEIC is converted before decoding rather than after a failure,
+each step has a time limit, and the status line names the step. A photo that genuinely has
+no GPS, confirmed in the Samsung gallery, now simply leaves the point empty.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.

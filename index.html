@@ -554,75 +554,74 @@
 
   function loadPhoto(f, dariKamera){
     if (!f) return;
-    if (photoURL) URL.revokeObjectURL(photoURL);
-    photoURL = URL.createObjectURL(f);
+    if (photoURL) { URL.revokeObjectURL(photoURL); photoURL = null; }
 
+    $("loading").textContent = "Loading photo…";
     $("loading").style.display = "block";
     $("preview").style.display = "none";
     $("go").disabled = true;
     $("err").textContent = "";
 
-    const im = new Image();
-    im.onload = () => {
-      photo = im;
-      $("preview").src = photoURL;
+    const selesai = () => { $("loading").style.display = "none"; $("go").disabled = false; };
+
+    const pakai = (img, url) => {
+      photo = img;
+      photoURL = url || null;
+      $("preview").src = url || $("preview").src;
       $("preview").style.display = "block";
       $("afterpick").style.display = "flex";
-      $("loading").style.display = "none";
-      $("go").disabled = false;
+      selesai();
       if (dariKamera) useNow();
       else bacaExif(f);
     };
-    im.onerror = async () => {
-      // browser Android tidak bisa membuka HEIC; ubah dulu ke JPEG
-      if (/hei[cf]/i.test(f.type || "") || /\.hei[cf]$/i.test(f.name || "")){
-        try {
-          if (!window.heic2any) await muatSkrip("heic2any.min.js");
-          const out = await window.heic2any({ blob: f, toType: "image/jpeg", quality: 0.92 });
+
+    const batas = (promise, ms, pesan) => Promise.race([
+      promise,
+      new Promise((_, rej) => setTimeout(() => rej(new Error(pesan)), ms))
+    ]);
+
+    const muatGambar = (src) => new Promise((res, rej) => {
+      const im = new Image();
+      im.onload = () => res(im);
+      im.onerror = () => rej(new Error("decode"));
+      im.src = src;
+    });
+
+    (async () => {
+      const heic = /hei[cf]/i.test(f.type || "") || /\.hei[cf]$/i.test(f.name || "");
+      try {
+        if (heic){
+          $("loading").textContent = "Converting HEIC…";
+          if (!window.heic2any) await batas(muatSkrip("heic2any.min.js"), 20000, "script");
+          const out = await batas(window.heic2any({ blob: f, toType: "image/jpeg", quality: 0.92 }), 60000, "convert");
           const blob = Array.isArray(out) ? out[0] : out;
           const url = URL.createObjectURL(blob);
-          const im2 = new Image();
-          im2.onload = () => {
-            photo = im2;
-            if (photoURL) URL.revokeObjectURL(photoURL);
-            photoURL = url;
-            $("preview").src = url;
-            $("preview").style.display = "block";
-            $("afterpick").style.display = "flex";
-            $("loading").style.display = "none";
-            $("go").disabled = false;
-            bacaExif(f);
-          };
-          im2.onerror = () => { $("loading").style.display = "none"; $("go").disabled = false;
-            $("err").textContent = "Cannot read this photo (heic)."; };
-          im2.src = url;
+          const im = await muatGambar(url);
+          pakai(im, url);
           return;
-        } catch (e) { /* lanjut ke cadangan lain */ }
+        }
+
+        const url = URL.createObjectURL(f);
+        const im = await muatGambar(url);
+        pakai(im, url);
+      } catch (err) {
+        // cadangan: perkecil dulu, menangani foto sangat besar
+        try {
+          $("loading").textContent = "Resizing photo…";
+          const bmp = await batas(createImageBitmap(f, { resizeWidth: 3000, resizeQuality: "high" }), 30000, "resize");
+          const c = document.createElement("canvas");
+          c.width = bmp.width; c.height = bmp.height;
+          c.getContext("2d").drawImage(bmp, 0, 0);
+          pakai(c, c.toDataURL("image/jpeg", 0.85));
+        } catch (e2) {
+          selesai();
+          const tipe = (f.type || "").toLowerCase();
+          $("err").textContent = heic
+            ? "This HEIC photo could not be converted. Save it as JPEG, or use the app version."
+            : "Cannot read this photo" + (tipe ? " (" + tipe + ")" : "") + ". Try JPG or PNG.";
+        }
       }
-
-      // foto besar (mis. 108 MP) bisa gagal didekode utuh; coba perkecil dulu
-      try {
-        const bmp = await createImageBitmap(f, { resizeWidth: 3000, resizeQuality: "high" });
-        const c = document.createElement("canvas");
-        c.width = bmp.width; c.height = bmp.height;
-        c.getContext("2d").drawImage(bmp, 0, 0);
-        photo = c;
-        $("preview").src = c.toDataURL("image/jpeg", 0.85);
-        $("preview").style.display = "block";
-        $("afterpick").style.display = "flex";
-        $("loading").style.display = "none";
-        $("go").disabled = false;
-        if (dariKamera) useNow();
-        return;
-      } catch (e) { /* lanjut ke pesan galat */ }
-
-      $("loading").style.display = "none";
-      $("go").disabled = false;
-      const tipe = (f.type || "").toLowerCase();
-      $("err").textContent = "Cannot read this photo" + (tipe ? " (" + tipe + ")" : "") +
-        ". Try JPG or PNG.";
-    };
-    im.src = photoURL;
+    })();
   }
 
   // foto dari galeri: kalau ada EXIF, pakai lokasi dan tanggal aslinya
