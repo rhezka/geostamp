@@ -31,4 +31,5 @@ android {
 dependencies {
     implementation("androidx.webkit:webkit:1.11.0")
     implementation("androidx.activity:activity-ktx:1.9.0")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
 }

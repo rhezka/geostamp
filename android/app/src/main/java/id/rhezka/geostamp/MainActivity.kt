@@ -4,7 +4,10 @@ import android.Manifest
 import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.Matrix
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -20,7 +23,9 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
+import androidx.exifinterface.media.ExifInterface
 import androidx.webkit.WebViewAssetLoader
+import java.io.File
 
 class MainActivity : androidx.activity.ComponentActivity() {
 
@@ -30,8 +35,49 @@ class MainActivity : androidx.activity.ComponentActivity() {
     private val pickImage = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        fileCallback?.onReceiveValue(uri?.let { arrayOf(it) } ?: null)
+        val prepared = uri?.let { prepareImage(it) }
+        fileCallback?.onReceiveValue(prepared?.let { arrayOf(it) })
         fileCallback = null
+    }
+
+    /**
+     * Foto dari galeri disalin dulu jadi JPEG di cache. Ini perlu karena WebView tidak
+     * selalu bisa membaca HEIC atau URI penyimpanan awan langsung.
+     */
+    private fun prepareImage(source: Uri): Uri? {
+        return try {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            contentResolver.openInputStream(source).use { BitmapFactory.decodeStream(it, null, bounds) }
+
+            val longest = maxOf(bounds.outWidth, bounds.outHeight)
+            var sample = 1
+            while (longest / sample > 4096) sample *= 2
+
+            val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+            val bitmap = contentResolver.openInputStream(source).use {
+                BitmapFactory.decodeStream(it, null, opts)
+            } ?: return null
+
+            val rotation = contentResolver.openInputStream(source).use { input ->
+                when (ExifInterface(input).getAttributeInt(ExifInterface.TAG_ORIENTATION, 1)) {
+                    ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                    ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                    ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                    else -> 0f
+                }
+            }
+
+            val fixed = if (rotation != 0f) {
+                val m = Matrix().apply { postRotate(rotation) }
+                Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, m, true)
+            } else bitmap
+
+            val out = File(cacheDir, "picked.jpg")
+            out.outputStream().use { fixed.compress(Bitmap.CompressFormat.JPEG, 92, it) }
+            Uri.fromFile(out)
+        } catch (e: Exception) {
+            null
+        }
     }
 
     private val takePhoto = registerForActivityResult(
@@ -58,7 +104,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
             javaScriptEnabled = true
             domStorageEnabled = true
             databaseEnabled = true
-            allowFileAccess = false
+            allowFileAccess = true
             allowContentAccess = true
             mediaPlaybackRequiresUserGesture = false
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
