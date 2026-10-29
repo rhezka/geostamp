@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="id">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GeoStamp">
-<meta name="app-version" content="v16">
+<meta name="app-version" content="v42">
 <meta name="description" content="Stamp photos with map, address, coordinates and time.">
 <title>GeoStamp</title>
 <link rel="stylesheet" href="leaflet/leaflet.css">
@@ -22,10 +22,9 @@
   header { padding:calc(env(safe-area-inset-top) + 16px) 16px 16px; display:flex; align-items:center;
            gap:13px; background:linear-gradient(160deg,#1c2635 0%,#141a23 55%,#0f1319 100%);
            border-bottom:1px solid var(--line); position:sticky; top:0; z-index:1200; }
-  header img { width:46px; height:46px; border-radius:12px; box-shadow:0 4px 14px rgba(0,0,0,.45); }
+  header img { width:30px; height:30px; border-radius:8px; box-shadow:0 4px 14px rgba(0,0,0,.45); }
   .titles { display:flex; flex-direction:column; gap:1px; }
   .by { font-size:13px; color:#a7b3c6; letter-spacing:.01em; }
-  header img { width:30px; height:30px; border-radius:8px; }
   h1 { font-size:26px; margin:0; letter-spacing:.01em; font-weight:700; }
   header p { margin:0; font-size:12.5px; color:var(--dim); }
   .card { background:var(--card); border:1px solid var(--line); border-radius:16px; margin:12px; padding:14px; }
@@ -68,14 +67,10 @@
   button:active { background:#2559c9; }
   button.ghost { background:#232b38; color:var(--txt); }
   button.ghost:active { background:#2c3644; }
-  .filebtn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:15px;
-             border-radius:13px; background:#232b38; color:var(--txt); font-size:15px; font-weight:600; }
-  .filebtn:active { background:#2c3644; }
   input[type=file] { display:none; }
   #preview { width:100%; border-radius:12px; margin-top:12px; display:none; }
   #outimg { width:100%; border-radius:12px; display:none; margin-top:12px; }
   .hint { font-size:12px; color:var(--dim); line-height:1.5; margin-top:10px; }
-  .pill { display:inline-block; font-size:11px; padding:3px 9px; border-radius:99px; background:#20304d; color:#9ec1ff; }
   .err { color:#ff8a8a; font-size:13px; margin-top:10px; }
   .picker { display:flex; flex-direction:column; align-items:flex-start; gap:2px; width:100%;
             padding:11px 30px 11px 13px; border-radius:12px; border:1px solid #37455c;
@@ -423,21 +418,24 @@
         for (let dy = -2; dy <= 2; dy++)
           urls.push(TILES[gaya].url(z, cx + dx, cy + dy));
     }
+    const c = await caches.open("geostamp-tiles-cors");
     for (const u of urls){
-      const c = await caches.open("geostamp-tiles-cors");
-      const hit = await c.match(u);
-      if (hit) continue;
       try {
+        const hit = await c.match(u);
+        if (hit) continue;
         const r = await fetch(u, { mode: "cors" });   // CORS agar kanvas tidak tercemar
         if (r && r.ok) await c.put(u, r.clone());
       } catch (e) { /* abaikan */ }
     }
   }
 
+  let revSeq = 0;
   function reverse(la, lo){
+    const my = ++revSeq;
     const u = "https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&accept-language=id&zoom=18"
             + "&lat=" + la.toFixed(6) + "&lon=" + lo.toFixed(6);
     fetch(u).then(r => r.json()).then(j => {
+      if (my !== revSeq) return;   // titik sudah pindah, abaikan respons basi
       const a = j.address || {};
       const kota = a.city || a.town || "";
       const kec = a.city_district || a.suburb || "";
@@ -460,7 +458,10 @@
         kota ? null : region, state, country ].forEach(push);
       alamat = parts.join(", ") || j.display_name || "";
       $("addr").textContent = alamat || "address not found";
-    }).catch(() => { alamat = ""; judul = ""; $("addr").textContent = "address unavailable"; });
+    }).catch(() => {
+      if (my !== revSeq) return;
+      alamat = ""; judul = ""; $("addr").textContent = "address unavailable";
+    });
   }
 
   map.on("click", e => setPoint(e.latlng.lat, e.latlng.lng));
@@ -554,6 +555,7 @@
 
   function loadPhoto(f, dariKamera){
     if (!f) return;
+    const myPhoto = ++photoSeq;
     if (photoURL) { URL.revokeObjectURL(photoURL); photoURL = null; }
 
     $("loading").textContent = "Loading photo…";
@@ -572,7 +574,7 @@
       $("afterpick").style.display = "flex";
       selesai();
       if (dariKamera) useNow();
-      else bacaExif(f);
+      else bacaExif(f, myPhoto);
     };
 
     const batas = (promise, ms, pesan) => Promise.race([
@@ -631,12 +633,13 @@
       !(Math.abs(la) < 0.0001 && Math.abs(lo) < 0.0001);
   }
 
+  let photoSeq = 0;
   // foto dari galeri: kalau ada EXIF, pakai lokasi dan tanggal aslinya
-  async function bacaExif(file){
+  async function bacaExif(file, token){
     if (typeof exifr === "undefined") return;
     let o = null;
     try { o = await exifr.parse(file, { gps: true }); } catch (e) { return; }
-    if (!o) return;
+    if (!o || token !== photoSeq) return;   // pengguna sudah memilih foto lain
 
     if (gpsValid(o.latitude, o.longitude)){
       setPoint(o.latitude, o.longitude);
@@ -1275,11 +1278,20 @@
   $("save").addEventListener("click", async () => {
     const img = $("outimg");
     if (!img.dataset.ready || !outURL) return;
-    // di dalam aplikasi Android: simpan lewat jembatan bawaan
+    // di dalam aplikasi Android: simpan lewat jembatan bawaan, per potongan kecil
+    // karena binder tidak tahan string multi-MB sekaligus
     if (window.AndroidBridge && window.AndroidBridge.saveImage){
       try {
         if (!lastB64) throw new Error("no image");
-        window.AndroidBridge.saveImage(lastB64);
+        const B = window.AndroidBridge;
+        if (B.saveStart && B.saveChunk && B.saveEnd){
+          const CH = 400000;
+          B.saveStart(lastB64.length);
+          for (let i = 0; i < lastB64.length; i += CH) B.saveChunk(lastB64.slice(i, i + CH));
+          B.saveEnd();
+        } else {
+          B.saveImage(lastB64);
+        }
         const info = $("exifinfo");
         info.style.display = "block";
         info.textContent = "Saved to gallery";

@@ -1,9 +1,9 @@
 // Service worker sederhana: simpan berkas sendiri agar cepat dibuka dan tetap jalan offline.
 // Permintaan ke peta dan pencarian alamat selalu lewat jaringan.
-const CACHE = "geostamp-v41";
+const CACHE = "geostamp-v42";
 const TILE_CACHE = "geostamp-tiles";
 const TILE_HOSTS = ["tile.openstreetmap.org", "server.arcgisonline.com", "a.tile.opentopomap.org", "a.basemaps.cartocdn.com"];
-const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-180.png", "./exifr.min.js", "./leaflet/leaflet.js", "./leaflet/leaflet.css"];
+const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-180.png", "./exifr.min.js", "./heic2any.min.js", "./leaflet/leaflet.js", "./leaflet/leaflet.css"];
 const TILE_CACHE_CORS = "geostamp-tiles-cors";
 
 self.addEventListener("install", (e) => {
@@ -12,7 +12,9 @@ self.addEventListener("install", (e) => {
 
 self.addEventListener("activate", (e) => {
   e.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+    caches.keys().then((keys) => Promise.all(keys
+      .filter((k) => k !== CACHE && k.indexOf("geostamp-tiles") !== 0)
+      .map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });

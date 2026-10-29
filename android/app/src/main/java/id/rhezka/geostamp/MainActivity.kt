@@ -137,22 +137,30 @@ class MainActivity : androidx.activity.ComponentActivity() {
     }
 
     private fun handlePicked(uri: Uri?, fromCamera: Boolean) {
-        val picked = uri?.let { prepare(it) }
-        fileCallback?.onReceiveValue(picked?.file?.let { arrayOf(Uri.fromFile(it)) })
-        fileCallback = null
-        if (picked?.file != null) {
-            kirimMeta(picked.lat, picked.lon, picked.millis)
-            // Jangan diam kalau lokasi tidak terbaca dari foto galeri
-            if (!fromCamera && picked.lat == null) {
-                runOnUiThread {
-                    Toast.makeText(
-                        this@MainActivity,
-                        "Foto tidak menyimpan lokasi — titik diisi manual",
-                        Toast.LENGTH_LONG
-                    ).show()
+        if (uri == null) {
+            fileCallback?.onReceiveValue(null)
+            fileCallback = null
+            return
+        }
+        // Decode bitmap di thread latar: di thread utama bisa macet (ANR) untuk foto besar
+        Thread {
+            val picked = prepare(uri)
+            runOnUiThread {
+                fileCallback?.onReceiveValue(picked?.file?.let { arrayOf(Uri.fromFile(it)) })
+                fileCallback = null
+                if (picked?.file != null) {
+                    kirimMeta(picked.lat, picked.lon, picked.millis)
+                    // Jangan diam kalau lokasi tidak terbaca dari foto galeri
+                    if (!fromCamera && picked.lat == null) {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Foto tidak menyimpan lokasi — titik diisi manual",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 }
             }
-        }
+        }.start()
     }
 
     /**
@@ -274,30 +282,59 @@ class MainActivity : androidx.activity.ComponentActivity() {
     }
 
     inner class Bridge {
+        private val saveBuffer = StringBuilder()
+
         @JavascriptInterface
         fun saveImage(base64: String) {
-            try {
-                val bytes = Base64.decode(base64, Base64.DEFAULT)
-                val name = "geostamp-" + System.currentTimeMillis() + ".jpg"
-                val values = ContentValues().apply {
-                    put(MediaStore.Images.Media.DISPLAY_NAME, name)
-                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/GeoStamp")
+            saveBuffer.clear()
+            saveBuffer.append(base64)
+            simpanBuffer()
+        }
+
+        /** Halaman mengirim base64 per potongan karena binder tak tahan string multi-MB. */
+        @JavascriptInterface
+        fun saveStart(total: Int) {
+            saveBuffer.clear()
+            saveBuffer.ensureCapacity(total)
+        }
+
+        @JavascriptInterface
+        fun saveChunk(part: String) {
+            saveBuffer.append(part)
+        }
+
+        @JavascriptInterface
+        fun saveEnd() {
+            simpanBuffer()
+        }
+
+        private fun simpanBuffer() {
+            val b64 = saveBuffer.toString()
+            saveBuffer.clear()
+            Thread {
+                try {
+                    val bytes = Base64.decode(b64, Base64.DEFAULT)
+                    val name = "geostamp-" + System.currentTimeMillis() + ".jpg"
+                    val values = ContentValues().apply {
+                        put(MediaStore.Images.Media.DISPLAY_NAME, name)
+                        put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/GeoStamp")
+                        }
+                    }
+                    val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                    uri?.let {
+                        contentResolver.openOutputStream(it)?.use { out -> out.write(bytes) }
+                    }
+                    runOnUiThread {
+                        Toast.makeText(this@MainActivity, "Saved to gallery", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    runOnUiThread {
+                        Toast.makeText(this@MainActivity, "Could not save", Toast.LENGTH_SHORT).show()
                     }
                 }
-                val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-                uri?.let {
-                    contentResolver.openOutputStream(it)?.use { out -> out.write(bytes) }
-                }
-                runOnUiThread {
-                    Toast.makeText(this@MainActivity, "Saved to gallery", Toast.LENGTH_SHORT).show()
-                }
-            } catch (e: Exception) {
-                runOnUiThread {
-                    Toast.makeText(this@MainActivity, "Could not save", Toast.LENGTH_SHORT).show()
-                }
-            }
+            }.start()
         }
     }
 }

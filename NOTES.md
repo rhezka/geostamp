@@ -201,6 +201,24 @@ the app tried to pin a non-existent point and the result looked empty. All three
 browser EXIF, Android bridge, and native reader — now share one rule: finite numbers and
 not 0,0, otherwise the photo is reported as having no location and the point stays manual.
 
+**29-10-2026, full audit.** Read every file end to end. Findings worth fixing:
+
+1. The service worker deleted the offline tile caches on every update, so "offline maps"
+   quietly stopped working after each deploy. Tile caches are now preserved.
+2. A slow address lookup could overwrite the address of a newer point. Both the lookup
+   and the EXIF reader now carry a sequence token and ignore stale answers.
+3. `heic2any.min.js` was never cached, so HEIC conversion failed offline. Added.
+4. Android decoded the photo on the UI thread — a big photo could freeze the app (ANR).
+   Decoding now runs on a background thread.
+5. Android received the finished photo as one multi-megabyte string, past the binder
+   limit. The page now sends it in 400 KB chunks and the app reassembles it.
+6. Cosmetics: page language set to English, duplicate header-icon and clear-button rules
+   removed, dead styles dropped, version marker synced to v42.
+
+Left alone on purpose: the iOS save path (proven working on the phone), the WIB-only
+clock (correct for the owner), and the hand-rolled EXIF writer (verified byte-exact
+earlier).
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.
