@@ -187,6 +187,14 @@ photo loading was rewritten: HEIC is converted before decoding rather than after
 each step has a time limit, and the status line names the step. A photo that genuinely has
 no GPS, confirmed in the Samsung gallery, now simply leaves the point empty.
 
+**29-10-2026, the real cause of empty coordinates.** Since Android 10 the system redacts
+location tags inside photos from any app that does not hold ACCESS_MEDIA_LOCATION. We never
+asked for it, so ExifInterface and the MediaStore latitude column always came back empty —
+no amount of re-reading the file could fix that. The manifest now declares
+ACCESS_MEDIA_LOCATION and the gallery read permission, both are requested at runtime, and
+the app says so on screen ("Foto tidak menyimpan lokasi") instead of failing silently when
+a photo genuinely has no location.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.

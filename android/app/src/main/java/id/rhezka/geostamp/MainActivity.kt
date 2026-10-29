@@ -44,14 +44,14 @@ class MainActivity : androidx.activity.ComponentActivity() {
 
     private val pickImage = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.GetContent()
-    ) { uri: Uri? -> handlePicked(uri) }
+    ) { uri: Uri? -> handlePicked(uri, fromCamera = false) }
 
     private val takePhoto = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.TakePicture()
     ) { ok: Boolean ->
         val target = cameraUri
         cameraUri = null
-        handlePicked(if (ok) target else null)
+        handlePicked(if (ok) target else null, fromCamera = true)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -112,17 +112,47 @@ class MainActivity : androidx.activity.ComponentActivity() {
         setContentView(web)
         web.loadUrl("https://appassets.androidplatform.net/assets/www/index.html")
 
-        requestPermissions(
-            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.CAMERA),
-            1
-        )
+        mintaIzin()
     }
 
-    private fun handlePicked(uri: Uri?) {
+    /** Izin dibaca + lokasi media wajib ada sebelum EXIF foto dibaca. */
+    private fun mintaIzin() {
+        val daftar = mutableListOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.CAMERA
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            daftar.add(Manifest.permission.READ_MEDIA_IMAGES)
+        } else {
+            daftar.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+        // ACCESS_MEDIA_LOCATION ada sejak Android 10 (API 29)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            daftar.add(Manifest.permission.ACCESS_MEDIA_LOCATION)
+        }
+        val kurang = daftar.filter {
+            checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (kurang.isNotEmpty()) requestPermissions(kurang.toTypedArray(), 1)
+    }
+
+    private fun handlePicked(uri: Uri?, fromCamera: Boolean) {
         val picked = uri?.let { prepare(it) }
         fileCallback?.onReceiveValue(picked?.file?.let { arrayOf(Uri.fromFile(it)) })
         fileCallback = null
-        if (picked?.file != null) kirimMeta(picked.lat, picked.lon, picked.millis)
+        if (picked?.file != null) {
+            kirimMeta(picked.lat, picked.lon, picked.millis)
+            // Jangan diam kalau lokasi tidak terbaca dari foto galeri
+            if (!fromCamera && picked.lat == null) {
+                runOnUiThread {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Foto tidak menyimpan lokasi — titik diisi manual",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
     }
 
     /**
