@@ -162,6 +162,30 @@ class MainActivity : androidx.activity.ComponentActivity() {
             // tanpa metadata tetap lanjut
         }
 
+        // Sebagian foto Samsung menyimpan lokasi di basis data Galeri, bukan di dalam
+        // berkasnya. Kalau EXIF kosong, coba ambil dari MediaStore.
+        if (lat == null) {
+            try {
+                contentResolver.query(
+                    source,
+                    arrayOf(
+                        MediaStore.Images.Media.LATITUDE,
+                        MediaStore.Images.Media.LONGITUDE,
+                        MediaStore.Images.Media.DATE_TAKEN
+                    ), null, null, null
+                )?.use { c ->
+                    if (c.moveToFirst()) {
+                        if (!c.isNull(0) && !c.isNull(1)) {
+                            val la = c.getDouble(0)
+                            val lo = c.getDouble(1)
+                            if (!(la == 0.0 && lo == 0.0)) { lat = la; lon = lo }
+                        }
+                        if (millis == null && !c.isNull(2)) millis = c.getLong(2)
+                    }
+                }
+            } catch (e: Exception) { /* abaikan */ }
+        }
+
         return try {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeFile(temp.absolutePath, bounds)
