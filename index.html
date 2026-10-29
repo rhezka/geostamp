@@ -563,10 +563,28 @@
       if (dariKamera) useNow();
       else bacaExif(f);
     };
-    im.onerror = () => {
+    im.onerror = async () => {
+      // foto besar (mis. 108 MP) bisa gagal didekode utuh; coba perkecil dulu
+      try {
+        const bmp = await createImageBitmap(f, { resizeWidth: 3000, resizeQuality: "high" });
+        const c = document.createElement("canvas");
+        c.width = bmp.width; c.height = bmp.height;
+        c.getContext("2d").drawImage(bmp, 0, 0);
+        photo = c;
+        $("preview").src = c.toDataURL("image/jpeg", 0.85);
+        $("preview").style.display = "block";
+        $("afterpick").style.display = "flex";
+        $("loading").style.display = "none";
+        $("go").disabled = false;
+        if (dariKamera) useNow();
+        return;
+      } catch (e) { /* lanjut ke pesan galat */ }
+
       $("loading").style.display = "none";
       $("go").disabled = false;
-      $("err").textContent = "Cannot read this photo. Try JPG or PNG.";
+      const tipe = (f.type || "").toLowerCase();
+      $("err").textContent = "Cannot read this photo" + (tipe ? " (" + tipe + ")" : "") +
+        ". Try JPG or PNG.";
     };
     im.src = photoURL;
   }
@@ -1050,7 +1068,7 @@
     const gaya = $("gaya").value, posisi = $("posisi").value;
     // iOS membatasi ukuran kanvas (~16 juta piksel); foto besar diperkecil dulu
     const MAXPX = 16000000;
-    const nw = photo.naturalWidth, nh = photo.naturalHeight;
+    const nw = photo.naturalWidth || photo.width, nh = photo.naturalHeight || photo.height;
     const scale = Math.min(1, Math.sqrt(MAXPX / (nw * nh)));
     const W = Math.round(nw * scale), H = Math.round(nh * scale);
 
