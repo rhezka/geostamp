@@ -2,7 +2,6 @@ package id.rhezka.geostamp
 
 import android.Manifest
 import android.content.ContentValues
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -34,113 +33,26 @@ class MainActivity : androidx.activity.ComponentActivity() {
 
     private lateinit var web: WebView
     private var fileCallback: ValueCallback<Array<Uri>>? = null
+    private var cameraUri: Uri? = null
+
+    private data class Picked(
+        val file: File?,
+        val lat: Double?,
+        val lon: Double?,
+        val millis: Long?
+    )
 
     private val pickImage = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        var lat: Double? = null
-        var lon: Double? = null
-        var millis: Long? = null
-        val prepared = uri?.let {
-            readMeta(it).let { meta ->
-                lat = meta.first
-                lon = meta.second
-                millis = meta.third
-            }
-            prepareImage(it)
-        }
-        fileCallback?.onReceiveValue(prepared?.let { arrayOf(it) })
-        fileCallback = null
-        if (prepared != null) kirimMeta(lat, lon, millis)
-    }
-
-    /** Baca lokasi dan waktu dari foto asli sebelum diubah jadi JPEG. */
-    private fun readMeta(source: Uri): Triple<Double?, Double?, Long?> {
-        var lat: Double? = null
-        var lon: Double? = null
-        var millis: Long? = null
-        try {
-            contentResolver.openInputStream(source)?.use { input ->
-                val exif = ExifInterface(input)
-                exif.latLong?.let {
-                    lat = it[0]
-                    lon = it[1]
-                }
-                val raw = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL)
-                if (raw != null) {
-                    val offset = exif.getAttribute(ExifInterface.TAG_OFFSET_TIME_ORIGINAL)
-                    val fmt = SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US)
-                    fmt.timeZone = if (offset != null) TimeZone.getTimeZone("GMT$offset")
-                                   else TimeZone.getDefault()
-                    millis = fmt.parse(raw)?.time
-                }
-            }
-        } catch (e: Exception) {
-            // tanpa metadata bukan masalah
-        }
-        return Triple(lat, lon, millis)
-    }
-
-    private fun kirimMeta(lat: Double?, lon: Double?, millis: Long?) {
-        if (lat == null && millis == null) return
-        val la = lat?.toString() ?: "null"
-        val lo = lon?.toString() ?: "null"
-        val ms = millis?.toString() ?: "null"
-        web.post {
-            web.evaluateJavascript("window.geostampApplyExif($la, $lo, $ms)", null)
-        }
-    }
-
-    /**
-     * Foto dari galeri disalin dulu jadi JPEG di cache. Ini perlu karena WebView tidak
-     * selalu bisa membaca HEIC atau URI penyimpanan awan langsung.
-     */
-    private fun prepareImage(source: Uri): Uri? {
-        return try {
-            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            contentResolver.openInputStream(source)?.use { BitmapFactory.decodeStream(it, null, bounds) }
-
-            val longest = maxOf(bounds.outWidth, bounds.outHeight)
-            var sample = 1
-            while (longest / sample > 4096) sample *= 2
-
-            val opts = BitmapFactory.Options().apply { inSampleSize = sample }
-            val bitmap = contentResolver.openInputStream(source)?.use {
-                BitmapFactory.decodeStream(it, null, opts)
-            } ?: return null
-
-            val rotation = contentResolver.openInputStream(source)?.use { input ->
-                when (ExifInterface(input).getAttributeInt(ExifInterface.TAG_ORIENTATION, 1)) {
-                    ExifInterface.ORIENTATION_ROTATE_90 -> 90f
-                    ExifInterface.ORIENTATION_ROTATE_180 -> 180f
-                    ExifInterface.ORIENTATION_ROTATE_270 -> 270f
-                    else -> 0f
-                }
-            } ?: 0f
-
-            val fixed = if (rotation != 0f) {
-                val m = Matrix().apply { postRotate(rotation) }
-                Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, m, true)
-            } else bitmap
-
-            val out = File(cacheDir, "picked.jpg")
-            out.outputStream().use { fixed.compress(Bitmap.CompressFormat.JPEG, 92, it) }
-            Uri.fromFile(out)
-        } catch (e: Exception) {
-            null
-        }
-    }
+    ) { uri: Uri? -> handlePicked(uri) }
 
     private val takePhoto = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.TakePicture()
     ) { ok: Boolean ->
-        val uri = cameraUri
-        fileCallback?.onReceiveValue(if (ok && uri != null) arrayOf(uri) else null)
-        fileCallback = null
+        val target = cameraUri
         cameraUri = null
+        handlePicked(if (ok) target else null)
     }
-
-    private var cameraUri: Uri? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -198,15 +110,100 @@ class MainActivity : androidx.activity.ComponentActivity() {
 
         web.addJavascriptInterface(Bridge(), "AndroidBridge")
         setContentView(web)
-
         web.loadUrl("https://appassets.androidplatform.net/assets/www/index.html")
 
         requestPermissions(
-            arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.CAMERA
-            ), 1
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.CAMERA),
+            1
         )
+    }
+
+    private fun handlePicked(uri: Uri?) {
+        val picked = uri?.let { prepare(it) }
+        fileCallback?.onReceiveValue(picked?.file?.let { arrayOf(Uri.fromFile(it)) })
+        fileCallback = null
+        if (picked?.file != null) kirimMeta(picked.lat, picked.lon, picked.millis)
+    }
+
+    /**
+     * Foto disalin dulu ke berkas sementara, baru dibaca. Dengan begitu metadata bisa
+     * dibaca andal, dan hasilnya diubah jadi JPEG supaya WebView pasti bisa membukanya.
+     */
+    private fun prepare(source: Uri): Picked {
+        val temp = File(cacheDir, "source.tmp")
+        var lat: Double? = null
+        var lon: Double? = null
+        var millis: Long? = null
+
+        try {
+            contentResolver.openInputStream(source)?.use { input ->
+                temp.outputStream().use { output -> input.copyTo(output) }
+            } ?: return Picked(null, null, null, null)
+        } catch (e: Exception) {
+            return Picked(null, null, null, null)
+        }
+
+        try {
+            val exif = ExifInterface(temp.absolutePath)
+            exif.latLong?.let {
+                lat = it[0]
+                lon = it[1]
+            }
+            val raw = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL)
+                ?: exif.getAttribute(ExifInterface.TAG_DATETIME)
+            if (raw != null) {
+                val offset = exif.getAttribute(ExifInterface.TAG_OFFSET_TIME_ORIGINAL)
+                val fmt = SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US)
+                fmt.timeZone = if (offset != null) TimeZone.getTimeZone("GMT$offset")
+                               else TimeZone.getDefault()
+                millis = fmt.parse(raw)?.time
+            }
+        } catch (e: Exception) {
+            // tanpa metadata tetap lanjut
+        }
+
+        return try {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(temp.absolutePath, bounds)
+
+            val longest = maxOf(bounds.outWidth, bounds.outHeight)
+            var sample = 1
+            while (longest / sample > 4096) sample *= 2
+
+            val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+            val bitmap = BitmapFactory.decodeFile(temp.absolutePath, opts)
+                ?: return Picked(null, lat, lon, millis)
+
+            val rotation = try {
+                when (ExifInterface(temp.absolutePath)
+                    .getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
+                    ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                    ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                    ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                    else -> 0f
+                }
+            } catch (e: Exception) { 0f }
+
+            val fixed = if (rotation != 0f) {
+                val m = Matrix().apply { postRotate(rotation) }
+                Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, m, true)
+            } else bitmap
+
+            val out = File(cacheDir, "picked.jpg")
+            out.outputStream().use { fixed.compress(Bitmap.CompressFormat.JPEG, 92, it) }
+            Picked(out, lat, lon, millis)
+        } catch (e: Exception) {
+            Picked(null, lat, lon, millis)
+        }
+    }
+
+    private fun kirimMeta(lat: Double?, lon: Double?, millis: Long?) {
+        val la = lat?.toString() ?: "null"
+        val lo = lon?.toString() ?: "null"
+        val ms = millis?.toString() ?: "null"
+        web.post {
+            web.evaluateJavascript("window.geostampApplyExif($la, $lo, $ms)", null)
+        }
     }
 
     private fun newImageUri(): Uri? {
@@ -218,8 +215,6 @@ class MainActivity : androidx.activity.ComponentActivity() {
         return contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
     }
 
-
-    // jembatan: halaman mengirim gambar jadi (base64) untuk disimpan ke galeri
     inner class Bridge {
         @JavascriptInterface
         fun saveImage(base64: String) {
