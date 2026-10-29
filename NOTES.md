@@ -232,6 +232,14 @@ replace it. The release IPA stays exactly as it is. Suspected cause, not acted o
 bundles the page but still fetches map tiles from the internet, so a blank map in the
 field most likely means no signal at that moment — needs confirmation from the phone.
 
+**29-10-2026, blank map in the IPA.** The bundle was complete, so the cause was the
+delivery, not the files: the page ran from `file://`, which WebKit restricts more than
+Safari tabs. The app now serves its own page over `http://127.0.0.1` from a tiny built-in
+server (no dependency), so tiles, search, cache and the service worker behave exactly like
+the web version, with `file://` kept only as a fallback. `NSAllowsLocalNetworking` covers
+the local HTTP. The page also shows an online/offline dot under the map, and an offline
+stamp still prints coordinates and time instead of failing.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.

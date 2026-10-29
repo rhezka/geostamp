@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GeoStamp">
-<meta name="app-version" content="v43">
+<meta name="app-version" content="v44">
 <meta name="description" content="Stamp photos with map, address, coordinates and time.">
 <title>GeoStamp</title>
 <link rel="stylesheet" href="leaflet/leaflet.css">
@@ -118,6 +118,7 @@
     <div id="hasil" class="hasil"></div>
   </div>
   <div id="map"></div>
+  <div class="hint" id="netstat" style="margin-top:8px"></div>
   <div id="coord" class="coord" style="margin-top:12px;display:none">
     <span id="coordtext"></span>
     <button class="copybtn" id="copybtn" aria-label="Copy coordinates">
@@ -462,7 +463,10 @@
       $("addr").textContent = alamat || "address not found";
     }).catch(() => {
       if (my !== revSeq) return;
-      alamat = ""; judul = ""; $("addr").textContent = "address unavailable";
+      alamat = ""; judul = "";
+      $("addr").textContent = navigator.onLine === false
+        ? "Offline — address needs internet"
+        : "Address unavailable";
     });
   }
 
@@ -830,6 +834,20 @@
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     );
   });
+
+  function updateNet(){
+    const el = $("netstat");
+    if (navigator.onLine === false){
+      el.textContent = "● Offline — maps need internet; coordinates and time still work";
+      el.style.color = "#ff9d9d";
+    } else {
+      el.textContent = "● Online";
+      el.style.color = "#7fd08a";
+    }
+  }
+  window.addEventListener("online", updateNet);
+  window.addEventListener("offline", updateNet);
+  updateNet();
 
   $("btnPlaces").addEventListener("click", bukaPlaces);
   updatePlacesLabel();
