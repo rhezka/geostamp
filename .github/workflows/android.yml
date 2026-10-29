@@ -28,7 +28,7 @@ jobs:
       - name: Siapkan aset web di dalam app
         run: |
           mkdir -p android/app/src/main/assets/www
-          cp index.html manifest.json sw.js exifr.min.js android/app/src/main/assets/www/
+          cp index.html manifest.json sw.js exifr.min.js heic2any.min.js android/app/src/main/assets/www/
           cp icon-*.png android/app/src/main/assets/www/
           cp -R leaflet android/app/src/main/assets/www/leaflet
 

@@ -19,7 +19,7 @@ jobs:
       - name: Siapkan aset web di dalam app
         run: |
           mkdir -p app/Web
-          cp index.html manifest.json sw.js exifr.min.js app/Web/
+          cp index.html manifest.json sw.js exifr.min.js heic2any.min.js app/Web/
           cp icon-*.png app/Web/
           cp -R leaflet app/Web/leaflet
 

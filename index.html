@@ -542,6 +542,16 @@
   $("skala").addEventListener("input", e => { $("skalaval").textContent = e.target.value + "%"; });
 
   // ---------- pilih foto
+  function muatSkrip(src){
+    return new Promise((res, rej) => {
+      const el = document.createElement("script");
+      el.src = src;
+      el.onload = () => res();
+      el.onerror = () => rej(new Error("gagal memuat " + src));
+      document.head.appendChild(el);
+    });
+  }
+
   function loadPhoto(f, dariKamera){
     if (!f) return;
     if (photoURL) URL.revokeObjectURL(photoURL);
@@ -564,6 +574,32 @@
       else bacaExif(f);
     };
     im.onerror = async () => {
+      // browser Android tidak bisa membuka HEIC; ubah dulu ke JPEG
+      if (/hei[cf]/i.test(f.type || "") || /\.hei[cf]$/i.test(f.name || "")){
+        try {
+          if (!window.heic2any) await muatSkrip("heic2any.min.js");
+          const out = await window.heic2any({ blob: f, toType: "image/jpeg", quality: 0.92 });
+          const blob = Array.isArray(out) ? out[0] : out;
+          const url = URL.createObjectURL(blob);
+          const im2 = new Image();
+          im2.onload = () => {
+            photo = im2;
+            if (photoURL) URL.revokeObjectURL(photoURL);
+            photoURL = url;
+            $("preview").src = url;
+            $("preview").style.display = "block";
+            $("afterpick").style.display = "flex";
+            $("loading").style.display = "none";
+            $("go").disabled = false;
+            bacaExif(f);
+          };
+          im2.onerror = () => { $("loading").style.display = "none"; $("go").disabled = false;
+            $("err").textContent = "Cannot read this photo (heic)."; };
+          im2.src = url;
+          return;
+        } catch (e) { /* lanjut ke cadangan lain */ }
+      }
+
       // foto besar (mis. 108 MP) bisa gagal didekode utuh; coba perkecil dulu
       try {
         const bmp = await createImageBitmap(f, { resizeWidth: 3000, resizeQuality: "high" });
