@@ -195,6 +195,12 @@ ACCESS_MEDIA_LOCATION and the gallery read permission, both are requested at run
 the app says so on screen ("Foto tidak menyimpan lokasi") instead of failing silently when
 a photo genuinely has no location.
 
+**29-10-2026, NaN coordinates.** The Samsung file carries GPS tags filled with zeros, which
+decode as NaN rather than null. The old check (`typeof x === "number"`) passes for NaN, so
+the app tried to pin a non-existent point and the result looked empty. All three paths —
+browser EXIF, Android bridge, and native reader — now share one rule: finite numbers and
+not 0,0, otherwise the photo is reported as having no location and the point stays manual.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.

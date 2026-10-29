@@ -176,8 +176,12 @@ class MainActivity : androidx.activity.ComponentActivity() {
         try {
             val exif = ExifInterface(temp.absolutePath)
             exif.latLong?.let {
-                lat = it[0]
-                lon = it[1]
+                // Tag GPS berisi nol semua menghasilkan NaN — tolak agar tidak dikirim
+                if (it[0].isFinite() && it[1].isFinite()
+                    && !(it[0] == 0.0 && it[1] == 0.0)) {
+                    lat = it[0]
+                    lon = it[1]
+                }
             }
             val raw = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL)
                 ?: exif.getAttribute(ExifInterface.TAG_DATETIME)

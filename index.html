@@ -624,6 +624,13 @@
     })();
   }
 
+  // GPS rusak (NaN / 0,0) harus ditolak — typeof NaN === "number" lolos cek biasa
+  function gpsValid(la, lo){
+    return typeof la === "number" && typeof lo === "number" &&
+      Number.isFinite(la) && Number.isFinite(lo) &&
+      !(Math.abs(la) < 0.0001 && Math.abs(lo) < 0.0001);
+  }
+
   // foto dari galeri: kalau ada EXIF, pakai lokasi dan tanggal aslinya
   async function bacaExif(file){
     if (typeof exifr === "undefined") return;
@@ -631,10 +638,11 @@
     try { o = await exifr.parse(file, { gps: true }); } catch (e) { return; }
     if (!o) return;
 
-    if (typeof o.latitude === "number" && typeof o.longitude === "number" &&
-        !(Math.abs(o.latitude) < 0.0001 && Math.abs(o.longitude) < 0.0001)){
+    if (gpsValid(o.latitude, o.longitude)){
       setPoint(o.latitude, o.longitude);
       map.setView([o.latitude, o.longitude], 17);
+    } else {
+      $("addr").textContent = "No location in this photo — set the point manually";
     }
 
     const t = o.DateTimeOriginal || o.CreateDate || o.ModifyDate;
@@ -651,10 +659,11 @@
 
   // dipanggil dari aplikasi Android setelah foto diubah jadi JPEG (EXIF-nya hilang)
   window.geostampApplyExif = (la, lo, millis) => {
-    if (typeof la === "number" && typeof lo === "number" &&
-        !(Math.abs(la) < 0.0001 && Math.abs(lo) < 0.0001)){
+    if (gpsValid(la, lo)){
       setPoint(la, lo);
       map.setView([la, lo], 17);
+    } else {
+      $("addr").textContent = "No location in this photo — set the point manually";
     }
     if (typeof millis === "number" && isFinite(millis)){
       const d = new Date(millis);
