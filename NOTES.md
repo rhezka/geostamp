@@ -225,6 +225,13 @@ autofill on the web — that is a platform limit, not a bug. The Android app cov
 through the MediaStore fallback. For the web, a "Use current location" button now appears
 whenever the photo has no location, filling the point from the phone's GPS in one tap.
 
+**29-10-2026, IPA frozen.** The installed IPA shows a blank map while the same page works
+in Safari, and the owner asked that the IPA no longer be touched. The iOS workflow is
+disabled (renamed to `ios.yml.disabled`), so future web or Android work cannot rebuild or
+replace it. The release IPA stays exactly as it is. Suspected cause, not acted on: the app
+bundles the page but still fetches map tiles from the internet, so a blank map in the
+field most likely means no signal at that moment — needs confirmation from the phone.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.
