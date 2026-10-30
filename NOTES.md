@@ -240,6 +240,13 @@ the web version, with `file://` kept only as a fallback. `NSAllowsLocalNetworkin
 the local HTTP. The page also shows an online/offline dot under the map, and an offline
 stamp still prints coordinates and time instead of failing.
 
+**30-10-2026, camera GPS never locks in the IPA.** Two faults, both mine. The app declared
+the location usage text but never requested authorization, and WebView GPS often hangs
+without ever calling back. The app now asks for location permission at startup and takes
+the fix natively through CoreLocation, reporting back to the page over a `getLocation`
+bridge with denied/timeout/unavailable states. The page uses the bridge only inside the
+iOS app; web and Android paths are untouched.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.

@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GeoStamp">
-<meta name="app-version" content="v44">
+<meta name="app-version" content="v45">
 <meta name="description" content="Stamp photos with map, address, coordinates and time.">
 <title>GeoStamp</title>
 <link rel="stylesheet" href="leaflet/leaflet.css">
@@ -685,8 +685,27 @@
     }
   };
 
-  // kamera: waktu dan titik diambil saat itu juga
+  // kamera: waktu dan titik diambil saat itu juga.
+  // Di dalam aplikasi iOS, titik diambil lewat jembatan bawaan karena GPS web
+  // di WebView sering tidak pernah kembali.
   function useNow(){
+    const bridge = window.webkit && window.webkit.messageHandlers &&
+                   window.webkit.messageHandlers.getLocation;
+    if (bridge){
+      $("coord").style.display = "flex";
+      $("coordtext").textContent = "getting GPS…";
+      window.geostampNativeLocation = (la, lo, err) => {
+        if (Number.isFinite(la) && Number.isFinite(lo)){
+          setPoint(la, lo);
+          map.setView([la, lo], 17);
+        } else {
+          $("coord").style.display = "none";
+          $("coordtext").textContent = "";
+          if (err === "denied") $("addr").textContent = "Location permission denied";
+        }
+      };
+      try { bridge.postMessage(""); return; } catch (e) { /* jatuh ke GPS web */ }
+    }
     const now = new Date();
     const t = new Date(now.getTime() + (7*60 + now.getTimezoneOffset())*60000);
     const p = n => String(n).padStart(2,"0");

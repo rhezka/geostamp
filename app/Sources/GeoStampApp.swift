@@ -2,6 +2,7 @@ import SwiftUI
 import WebKit
 import Photos
 import Network
+import CoreLocation
 
 @main
 struct GeoStampApp: App {
@@ -21,6 +22,7 @@ struct ContentView: UIViewRepresentable {
         config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
         config.setValue(true, forKey: "allowUniversalAccessFromFileURLs")
         config.userContentController.add(context.coordinator, name: "savePhoto")
+        config.userContentController.add(context.coordinator, name: "getLocation")
 
         let web = WKWebView(frame: .zero, configuration: config)
         web.isOpaque = false
@@ -30,6 +32,7 @@ struct ContentView: UIViewRepresentable {
         web.navigationDelegate = context.coordinator
         web.uiDelegate = context.coordinator
 
+        context.coordinator.ensureLocationPermission()
         if let webDir = Bundle.main.url(forResource: "Web", withExtension: nil) {
             context.coordinator.startApp(web: web, webDir: webDir)
         }
@@ -40,7 +43,7 @@ struct ContentView: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, CLLocationManagerDelegate {
         var server: LocalServer?
         var webDir: URL?
         var portIndex = 0
@@ -85,9 +88,85 @@ struct ContentView: UIViewRepresentable {
             decisionHandler(.grant)
         }
 
+        var locationManager: CLLocationManager?
+        var pendingWebView: WKWebView?
+
+        func ensureLocationPermission() {
+            let m = locationManager ?? CLLocationManager()
+            locationManager = m
+            m.delegate = self
+            if m.authorizationStatus == .notDetermined {
+                m.requestWhenInUseAuthorization()
+            }
+        }
+
+        // halaman minta titik GPS lewat jalur bawaan (WebView sering menggantung)
+        func fetchLocation(webView: WKWebView) {
+            if locationManager == nil { ensureLocationPermission() }
+            guard let m = locationManager else {
+                webView.evaluateJavaScript("window.geostampNativeLocation(null,null,'unavailable')",
+                                           completionHandler: nil)
+                return
+            }
+            switch m.authorizationStatus {
+            case .authorizedAlways, .authorizedWhenInUse:
+                pendingWebView = webView
+                m.desiredAccuracy = kCLLocationAccuracyBest
+                m.requestLocation()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 20) { [weak self] in
+                    guard let self = self, let web = self.pendingWebView else { return }
+                    self.pendingWebView = nil
+                    web.evaluateJavaScript("window.geostampNativeLocation(null,null,'timeout')",
+                                           completionHandler: nil)
+                }
+            case .notDetermined:
+                pendingWebView = webView
+                m.requestWhenInUseAuthorization()
+            default:
+                webView.evaluateJavaScript("window.geostampNativeLocation(null,null,'denied')",
+                                           completionHandler: nil)
+            }
+        }
+
+        func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+            guard pendingWebView != nil else { return }
+            switch manager.authorizationStatus {
+            case .authorizedAlways, .authorizedWhenInUse:
+                manager.desiredAccuracy = kCLLocationAccuracyBest
+                manager.requestLocation()
+            case .denied, .restricted:
+                if let web = pendingWebView {
+                    pendingWebView = nil
+                    web.evaluateJavaScript("window.geostampNativeLocation(null,null,'denied')",
+                                           completionHandler: nil)
+                }
+            default:
+                break
+            }
+        }
+
+        func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+            guard let web = pendingWebView, let loc = locations.last else { return }
+            pendingWebView = nil
+            web.evaluateJavaScript(
+                "window.geostampNativeLocation(\(loc.coordinate.latitude),\(loc.coordinate.longitude),null)",
+                completionHandler: nil)
+        }
+
+        func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+            guard let web = pendingWebView else { return }
+            pendingWebView = nil
+            web.evaluateJavaScript("window.geostampNativeLocation(null,null,'unavailable')",
+                                   completionHandler: nil)
+        }
+
         // halaman mengirim gambar jadi (base64) untuk disimpan ke galeri
         func userContentController(_ userContentController: WKUserContentController,
                                    didReceive message: WKScriptMessage) {
+            if message.name == "getLocation" {
+                if let web = message.webView { fetchLocation(webView: web) }
+                return
+            }
             guard message.name == "savePhoto",
                   let base64 = message.body as? String,
                   let data = Data(base64Encoded: base64),
