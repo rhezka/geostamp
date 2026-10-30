@@ -90,13 +90,21 @@ struct ContentView: UIViewRepresentable {
 
         var locationManager: CLLocationManager?
         var pendingWebView: WKWebView?
+        var lastFix: (lat: Double, lon: Double, at: Date)?
 
         func ensureLocationPermission() {
             let m = locationManager ?? CLLocationManager()
             locationManager = m
             m.delegate = self
+            // akurasi 10 meter cukup untuk stempel dan jauh lebih cepat terkunci
+            m.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
+            m.distanceFilter = 10
             if m.authorizationStatus == .notDetermined {
                 m.requestWhenInUseAuthorization()
+            } else if m.authorizationStatus == .authorizedWhenInUse ||
+                      m.authorizationStatus == .authorizedAlways {
+                // pemanasan: GPS sudah berjalan sejak aplikasi dibuka
+                m.startUpdatingLocation()
             }
         }
 
@@ -110,14 +118,27 @@ struct ContentView: UIViewRepresentable {
             }
             switch m.authorizationStatus {
             case .authorizedAlways, .authorizedWhenInUse:
+                // fix segar langsung dipakai — kunci seketika tanpa menunggu
+                if let fix = lastFix, Date().timeIntervalSince(fix.at) < 120 {
+                    webView.evaluateJavaScript(
+                        "window.geostampNativeLocation(\(fix.lat),\(fix.lon),null)",
+                        completionHandler: nil)
+                    return
+                }
                 pendingWebView = webView
-                m.desiredAccuracy = kCLLocationAccuracyBest
                 m.requestLocation()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 20) { [weak self] in
                     guard let self = self, let web = self.pendingWebView else { return }
                     self.pendingWebView = nil
-                    web.evaluateJavaScript("window.geostampNativeLocation(null,null,'timeout')",
-                                           completionHandler: nil)
+                    // timeout: kirim fix terakhir walau agak lama, daripada gagal total
+                    if let fix = self.lastFix {
+                        web.evaluateJavaScript(
+                            "window.geostampNativeLocation(\(fix.lat),\(fix.lon),null)",
+                            completionHandler: nil)
+                    } else {
+                        web.evaluateJavaScript("window.geostampNativeLocation(null,null,'timeout')",
+                                               completionHandler: nil)
+                    }
                 }
             case .notDetermined:
                 pendingWebView = webView
@@ -129,10 +150,15 @@ struct ContentView: UIViewRepresentable {
         }
 
         func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+            switch manager.authorizationStatus {
+            case .authorizedAlways, .authorizedWhenInUse:
+                manager.startUpdatingLocation()
+            default:
+                break
+            }
             guard pendingWebView != nil else { return }
             switch manager.authorizationStatus {
             case .authorizedAlways, .authorizedWhenInUse:
-                manager.desiredAccuracy = kCLLocationAccuracyBest
                 manager.requestLocation()
             case .denied, .restricted:
                 if let web = pendingWebView {
@@ -146,11 +172,16 @@ struct ContentView: UIViewRepresentable {
         }
 
         func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-            guard let web = pendingWebView, let loc = locations.last else { return }
-            pendingWebView = nil
-            web.evaluateJavaScript(
-                "window.geostampNativeLocation(\(loc.coordinate.latitude),\(loc.coordinate.longitude),null)",
-                completionHandler: nil)
+            guard let loc = locations.last else { return }
+            lastFix = (loc.coordinate.latitude, loc.coordinate.longitude, Date())
+            guard let web = pendingWebView else { return }
+            // terima fix pertama yang akurasinya wajar, jangan tunggu yang sempurna
+            if loc.horizontalAccuracy >= 0 && loc.horizontalAccuracy <= 150 {
+                pendingWebView = nil
+                web.evaluateJavaScript(
+                    "window.geostampNativeLocation(\(loc.coordinate.latitude),\(loc.coordinate.longitude),null)",
+                    completionHandler: nil)
+            }
         }
 
         func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {

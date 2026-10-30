@@ -247,6 +247,12 @@ the fix natively through CoreLocation, reporting back to the page over a `getLoc
 bridge with denied/timeout/unavailable states. The page uses the bridge only inside the
 iOS app; web and Android paths are untouched.
 
+**30-10-2026, slow GPS lock.** The first version asked for best accuracy from a cold
+start, which can take half a minute. Changed to ten-meter accuracy, continuous warm-up
+from app launch, instant answer from a fix younger than two minutes, first reasonable fix
+(<=150 m) accepted instead of waiting for perfect, and the last fix sent on timeout rather
+than an error. Swift only, so just the IPA rebuilds.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.
