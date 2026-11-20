@@ -235,17 +235,53 @@ struct ContentView: UIViewRepresentable {
 
         func imagePickerController(_ picker: UIImagePickerController,
                                    didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            picker.dismiss(animated: true)
+            picker.dismiss(animated: true) { [weak self] in
+                self?.finishCapture(info)
+            }
             self.picker = nil
-            guard let image = info[.originalImage] as? UIImage,
-                  let data = image.jpegData(compressionQuality: 0.92),
-                  let web = webView else { return }
-            let file = FileManager.default.temporaryDirectory
-                .appendingPathComponent("geostamp-photo.jpg")
-            try? data.write(to: file)
-            let stamp = Int(Date().timeIntervalSince1970)
-            let url = "http://127.0.0.1:\(activePort)/__photo/geostamp-photo.jpg?\(stamp)"
-            web.evaluateJavaScript("window.geostampSetPhotoUrl('\(url)')", completionHandler: nil)
+        }
+
+        /// Ambil gambar dari hasil kamera dengan beberapa cadangan, lalu tulis ke berkas unik.
+        private func finishCapture(_ info: [UIImagePickerController.InfoKey: Any]) {
+            guard let web = webView else { return }
+
+            var data: Data? = nil
+            if let image = (info[.originalImage] as? UIImage) ?? (info[.editedImage] as? UIImage) {
+                data = image.jpegData(compressionQuality: 0.92)
+            }
+            if data == nil, let url = info[.imageURL] as? URL {
+                data = try? Data(contentsOf: url)   // byte asli, utuh
+            }
+            guard let jpeg = data else {
+                web.evaluateJavaScript("window.geostampCameraError('nocapture')", completionHandler: nil)
+                return
+            }
+
+            let name = "geostamp-\(UUID().uuidString).jpg"
+            let file = FileManager.default.temporaryDirectory.appendingPathComponent(name)
+            guard (try? jpeg.write(to: file)) != nil else {
+                web.evaluateJavaScript("window.geostampCameraError('write')", completionHandler: nil)
+                return
+            }
+            bersihkanFotoLama()
+
+            let url = "http://127.0.0.1:\(activePort)/__photo/\(name)"
+            // beri jeda singkat: pastikan halaman sudah kembali ke depan setelah kamera ditutup
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                web.evaluateJavaScript("window.geostampSetPhotoUrl('\(url)')", completionHandler: nil)
+            }
+        }
+
+        private func bersihkanFotoLama() {
+            let tmp = FileManager.default.temporaryDirectory
+            guard let items = try? FileManager.default.contentsOfDirectory(
+                at: tmp, includingPropertiesForKeys: [.contentModificationDateKey]) else { return }
+            let batas = Date().addingTimeInterval(-3600)
+            for f in items where f.lastPathComponent.hasPrefix("geostamp-") {
+                let t = (try? f.resourceValues(forKeys: [.contentModificationDateKey]))?
+                    .contentModificationDate ?? Date()
+                if t < batas { try? FileManager.default.removeItem(at: f) }
+            }
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {

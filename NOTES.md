@@ -266,6 +266,13 @@ now writes the original JPEG bytes via PHAssetCreationRequest, so GPS and time s
 `return` above the clock code, so inside the iOS app the clock was only set once at page
 load. It is now written first, before any GPS branch.
 
+**20-11-2026, captures that never arrive.** Hardened the camera hand-off: the file name is
+now unique per shot (the shared temp name could be overwritten while the page was still
+reading it), the capture is read from `originalImage`, then `editedImage`, then the raw
+`imageURL` bytes, and every failure now reports back to the page instead of returning
+silently. The page waits until the camera sheet is fully dismissed before loading the file,
+and old temp captures are cleaned up. Version 1.2.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.

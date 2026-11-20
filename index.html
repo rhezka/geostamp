@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GeoStamp">
-<meta name="app-version" content="1.1">
+<meta name="app-version" content="1.2">
 <meta name="description" content="Stamp photos with map, address, coordinates and time.">
 <title>GeoStamp</title>
 <link rel="stylesheet" href="leaflet/leaflet.css">
@@ -662,9 +662,15 @@
   };
 
   window.geostampCameraError = (why) => {
-    $("err").textContent = why === "camera"
-      ? "Camera permission denied — enable it in Settings"
-      : "Camera is not available on this device";
+    const pesan = {
+      camera: "Camera permission denied — enable it in Settings",
+      unavailable: "Camera is not available on this device",
+      nocapture: "The camera returned no photo — please take it again",
+      write: "The photo could not be saved — please take it again"
+    };
+    $("err").textContent = pesan[why] || "Camera error";
+    $("loading").style.display = "none";
+    $("go").disabled = false;
   };
 
   // GPS rusak (NaN / 0,0) harus ditolak — typeof NaN === "number" lolos cek biasa
