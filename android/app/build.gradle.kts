@@ -11,8 +11,8 @@ android {
         applicationId = "id.rhezka.geostamp"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 48
+        versionName = "1.1"
     }
 
     buildTypes {

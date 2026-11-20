@@ -50,11 +50,13 @@ jobs:
           cp -R app/build/Build/Products/Release-iphoneos/GeoStamp.app Payload/
           cp itunes-artwork-512.png iTunesArtwork
           cp itunes-artwork-1024.png iTunesArtwork@2x
-          zip -qry GeoStamp.ipa Payload iTunesArtwork iTunesArtwork@2x
-          ls -la GeoStamp.ipa
+          VER=$(cat VERSION)
+          zip -qry "GeoStamp-$VER.ipa" Payload iTunesArtwork iTunesArtwork@2x
+          cp "GeoStamp-$VER.ipa" GeoStamp.ipa
+          ls -la GeoStamp-*.ipa
 
       - uses: actions/upload-artifact@v4
         with:
           name: GeoStamp-ipa
-          path: GeoStamp.ipa
+          path: GeoStamp-*.ipa
           if-no-files-found: error

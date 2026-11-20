@@ -45,12 +45,14 @@ jobs:
             -storepass geostamp -keypass geostamp \
             -dname "CN=GeoStamp, OU=Personal, O=GeoStamp, L=Pontianak, C=ID"
           $BT/zipalign -f -p 4 android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          VER=$(cat VERSION)
           $BT/apksigner sign --ks release.jks --ks-pass pass:geostamp --key-pass pass:geostamp \
-            --out GeoStamp.apk aligned.apk
-          ls -la GeoStamp.apk
+            --out "GeoStamp-$VER.apk" aligned.apk
+          cp "GeoStamp-$VER.apk" GeoStamp.apk
+          ls -la GeoStamp-*.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: GeoStamp-apk
-          path: GeoStamp.apk
+          path: GeoStamp-*.apk
           if-no-files-found: error
