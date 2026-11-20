@@ -250,7 +250,7 @@ struct ContentView: UIViewRepresentable {
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             picker.dismiss(animated: true)
-            picker = nil
+            self.picker = nil
         }
 
         // halaman mengirim gambar jadi (base64) untuk disimpan ke galeri
