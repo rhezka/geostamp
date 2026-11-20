@@ -253,6 +253,15 @@ from app launch, instant answer from a fix younger than two minutes, first reaso
 (<=150 m) accepted instead of waiting for perfect, and the last fix sent on timeout rather
 than an error. Swift only, so just the IPA rebuilds.
 
+**20-11-2026, camera and repeat photos in the IPA.** Three reports, two causes. The camera
+went through the WebView's file input, which in WKWebView reuses the same file reference,
+so a second shot often produced no change event — the photo "was not recorded" and the
+clock stayed at the first time. The camera is now native (UIImagePickerController), the
+result is written to a temp file served by the built-in local server, and the page loads it
+through a cache-busted URL, which also forces the clock to refresh on every shot. The third
+report was real: saving through UIImage re-encoded the image and dropped EXIF. The save path
+now writes the original JPEG bytes via PHAssetCreationRequest, so GPS and time survive.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.

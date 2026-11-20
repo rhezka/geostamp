@@ -3,6 +3,7 @@ import WebKit
 import Photos
 import Network
 import CoreLocation
+import AVFoundation
 
 @main
 struct GeoStampApp: App {
@@ -23,6 +24,7 @@ struct ContentView: UIViewRepresentable {
         config.setValue(true, forKey: "allowUniversalAccessFromFileURLs")
         config.userContentController.add(context.coordinator, name: "savePhoto")
         config.userContentController.add(context.coordinator, name: "getLocation")
+        config.userContentController.add(context.coordinator, name: "takePhoto")
 
         let web = WKWebView(frame: .zero, configuration: config)
         web.isOpaque = false
@@ -33,6 +35,7 @@ struct ContentView: UIViewRepresentable {
         web.uiDelegate = context.coordinator
 
         context.coordinator.ensureLocationPermission()
+        context.coordinator.webView = web
         if let webDir = Bundle.main.url(forResource: "Web", withExtension: nil) {
             context.coordinator.startApp(web: web, webDir: webDir)
         }
@@ -43,10 +46,12 @@ struct ContentView: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, CLLocationManagerDelegate {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, CLLocationManagerDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
         var server: LocalServer?
         var webDir: URL?
         var portIndex = 0
+        var activePort: UInt16 = 0
+        weak var webView: WKWebView?
         let ports: [UInt16] = [18923, 18924, 18925]
 
         func startApp(web: WKWebView, webDir: URL) {
@@ -64,6 +69,7 @@ struct ContentView: UIViewRepresentable {
                 return
             }
             let port = ports[portIndex]
+            activePort = port
             let server = LocalServer(root: dir)
             self.server = server
             server.start(port: port)
@@ -191,11 +197,71 @@ struct ContentView: UIViewRepresentable {
                                    completionHandler: nil)
         }
 
+        private var picker: UIImagePickerController?
+
+        func openCamera(from web: WKWebView) {
+            self.webView = web
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                DispatchQueue.main.async {
+                    guard granted else {
+                        web.evaluateJavaScript("window.geostampCameraError('camera')",
+                                               completionHandler: nil)
+                        return
+                    }
+                    guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+                        web.evaluateJavaScript("window.geostampCameraError('unavailable')",
+                                               completionHandler: nil)
+                        return
+                    }
+                    let pick = UIImagePickerController()
+                    pick.sourceType = .camera
+                    pick.cameraDevice = .rear
+                    pick.mediaTypes = ["public.image"]
+                    pick.delegate = self
+                    self.picker = pick
+                    self.topController()?.present(pick, animated: true)
+                }
+            }
+        }
+
+        private func topController() -> UIViewController? {
+            let scene = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first { $0.activationState == .foregroundActive }
+            var top = scene?.windows.first { $0.isKeyWindow }?.rootViewController
+            while let presented = top?.presentedViewController { top = presented }
+            return top
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController,
+                                   didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            picker.dismiss(animated: true)
+            self.picker = nil
+            guard let image = info[.originalImage] as? UIImage,
+                  let data = image.jpegData(compressionQuality: 0.92),
+                  let web = webView else { return }
+            let file = FileManager.default.temporaryDirectory
+                .appendingPathComponent("geostamp-photo.jpg")
+            try? data.write(to: file)
+            let stamp = Int(Date().timeIntervalSince1970)
+            let url = "http://127.0.0.1:\(activePort)/__photo/geostamp-photo.jpg?\(stamp)"
+            web.evaluateJavaScript("window.geostampSetPhotoUrl('\(url)')", completionHandler: nil)
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            picker.dismiss(animated: true)
+            picker = nil
+        }
+
         // halaman mengirim gambar jadi (base64) untuk disimpan ke galeri
         func userContentController(_ userContentController: WKUserContentController,
                                    didReceive message: WKScriptMessage) {
             if message.name == "getLocation" {
                 if let web = message.webView { fetchLocation(webView: web) }
+                return
+            }
+            if message.name == "takePhoto" {
+                if let web = message.webView { openCamera(from: web) }
                 return
             }
             guard message.name == "savePhoto",
@@ -206,7 +272,9 @@ struct ContentView: UIViewRepresentable {
             PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
                 guard status == .authorized || status == .limited else { return }
                 PHPhotoLibrary.shared().performChanges({
-                    PHAssetChangeRequest.creationRequestForAsset(from: image)
+                    // simpan byte asli, bukan UIImage, agar EXIF GPS dan waktu ikut
+                    let req = PHAssetCreationRequest.forAsset()
+                    req.addResource(with: .photo, data: data, options: nil)
                 })
             }
         }
@@ -262,6 +330,17 @@ final class LocalServer {
         if let q = path.firstIndex(of: "?") { path = String(path[..<q]) }
         path = path.removingPercentEncoding ?? path
         if path.hasSuffix("/") { path += "index.html" }
+
+        if path.hasPrefix("/__photo/") {
+            let name = String(path.dropFirst("/__photo/".count))
+            let file = FileManager.default.temporaryDirectory.appendingPathComponent(name)
+            if let body = try? Data(contentsOf: file) {
+                send(conn: conn, status: "200 OK", body: body, type: "image/jpeg")
+            } else {
+                send(conn: conn, status: "404 Not Found", body: Data("not found".utf8), type: "text/plain")
+            }
+            return
+        }
 
         let rel = path.hasPrefix("/") ? String(path.dropFirst()) : path
         var file = root.appendingPathComponent(rel)

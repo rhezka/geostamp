@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GeoStamp">
-<meta name="app-version" content="v45">
+<meta name="app-version" content="v46">
 <meta name="description" content="Stamp photos with map, address, coordinates and time.">
 <title>GeoStamp</title>
 <link rel="stylesheet" href="leaflet/leaflet.css">
@@ -632,6 +632,37 @@
     })();
   }
 
+  // hasil kamera bawaan iOS: berkas disajikan server lokal aplikasi
+  window.geostampSetPhotoUrl = (url) => {
+    $("loading").textContent = "Loading photo…";
+    $("loading").style.display = "block";
+    $("go").disabled = true;
+    $("err").textContent = "";
+    const im = new Image();
+    im.onload = () => {
+      photo = im;
+      photoURL = url;
+      $("preview").src = url;
+      $("preview").style.display = "block";
+      $("afterpick").style.display = "flex";
+      $("loading").style.display = "none";
+      $("go").disabled = false;
+      useNow();                       // waktu selalu diambil ulang per foto
+    };
+    im.onerror = () => {
+      $("loading").style.display = "none";
+      $("go").disabled = false;
+      $("err").textContent = "Camera photo could not be read. Try again.";
+    };
+    im.src = url;
+  };
+
+  window.geostampCameraError = (why) => {
+    $("err").textContent = why === "camera"
+      ? "Camera permission denied — enable it in Settings"
+      : "Camera is not available on this device";
+  };
+
   // GPS rusak (NaN / 0,0) harus ditolak — typeof NaN === "number" lolos cek biasa
   function gpsValid(la, lo){
     return typeof la === "number" && typeof lo === "number" &&
@@ -944,7 +975,16 @@
   $("addbtn").addEventListener("click", () => sheet.classList.add("show"));
   sheet.addEventListener("click", e => {
     const pick = e.target.getAttribute && e.target.getAttribute("data-pick");
-    if (pick){ tutupSheet(); $(pick).click(); return; }
+    if (pick){
+      tutupSheet();
+      if (pick === "cam" && window.webkit && window.webkit.messageHandlers &&
+          window.webkit.messageHandlers.takePhoto){
+        window.webkit.messageHandlers.takePhoto.postMessage("");
+        return;
+      }
+      $(pick).click();
+      return;
+    }
     if (e.target === sheet || (e.target.hasAttribute && e.target.hasAttribute("data-close"))) tutupSheet();
   });
 
