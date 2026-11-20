@@ -12,3 +12,5 @@ android/app/build/
 android/.gradle/
 release.jks
 GeoStamp.apk
+*.apk
+GeoStamp-*.ipa
