@@ -262,6 +262,10 @@ through a cache-busted URL, which also forces the clock to refresh on every shot
 report was real: saving through UIImage re-encoded the image and dropped EXIF. The save path
 now writes the original JPEG bytes via PHAssetCreationRequest, so GPS and time survive.
 
+**20-11-2026, clock stuck.** My bug: when I added the native GPS bridge I put its early
+`return` above the clock code, so inside the iOS app the clock was only set once at page
+load. It is now written first, before any GPS branch.
+
 ## Where things live
 
 `index.html` holds the whole app. `tools/stempel_foto.py` is the batch version.

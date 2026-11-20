@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GeoStamp">
-<meta name="app-version" content="v46">
+<meta name="app-version" content="v47">
 <meta name="description" content="Stamp photos with map, address, coordinates and time.">
 <title>GeoStamp</title>
 <link rel="stylesheet" href="leaflet/leaflet.css">
@@ -720,6 +720,13 @@
   // Di dalam aplikasi iOS, titik diambil lewat jembatan bawaan karena GPS web
   // di WebView sering tidak pernah kembali.
   function useNow(){
+    // jam SELALU diperbarui lebih dulu, apa pun jalur GPS yang dipakai
+    const now = new Date();
+    const t = new Date(now.getTime() + (7*60 + now.getTimezoneOffset())*60000);
+    const p = n => String(n).padStart(2,"0");
+    $("tgl").value = `${t.getFullYear()}-${p(t.getMonth()+1)}-${p(t.getDate())}`;
+    $("jam").value = `${p(t.getHours())}:${p(t.getMinutes())}`;
+
     const bridge = window.webkit && window.webkit.messageHandlers &&
                    window.webkit.messageHandlers.getLocation;
     if (bridge){
@@ -737,11 +744,7 @@
       };
       try { bridge.postMessage(""); return; } catch (e) { /* jatuh ke GPS web */ }
     }
-    const now = new Date();
-    const t = new Date(now.getTime() + (7*60 + now.getTimezoneOffset())*60000);
-    const p = n => String(n).padStart(2,"0");
-    $("tgl").value = `${t.getFullYear()}-${p(t.getMonth()+1)}-${p(t.getDate())}`;
-    $("jam").value = `${p(t.getHours())}:${p(t.getMinutes())}`;
+
     if (!navigator.geolocation) return;
     $("coord").style.display = "flex";
     $("coordtext").textContent = "getting GPS…";
